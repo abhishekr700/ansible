@@ -1,0 +1,12 @@
+---
+- name: Git setup user.email
+  community.general.git_config:
+    name: user.email
+    scope: global
+    value: abhishekr700@gmail.com
+
+- name: Git setup user.name
+  community.general.git_config:
+    name: user.name
+    scope: global
+    value: Abhishek Ranjan

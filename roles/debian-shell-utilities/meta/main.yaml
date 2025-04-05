@@ -3,7 +3,7 @@ galaxy_info:
   author: Abhishek Ranjan
   description: Role to install shell utilities on Debian-based systems
   license: MIT
-  min_ansible_version: 2.9
+  min_ansible_version: "2.9"
   platforms:
     - name: Debian
       versions:
