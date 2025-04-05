@@ -29,14 +29,14 @@
   git:
     repo: https://github.com/zsh-users/zsh-autosuggestions
     dest: "{{ zsh_custom }}/plugins/zsh-autosuggestions"
-    update: yes
+    update: true
 - name: Clone zsh-syntax-highlighting plugin to oh-my-zsh plugins directory
   git:
     repo: https://github.com/zsh-users/zsh-syntax-highlighting
     dest: "{{ zsh_custom }}/plugins/zsh-syntax-highlighting"
-    update: yes
+    update: true
 - name: Clone zsh-completions plugin to oh-my-zsh plugins directory
   git:
     repo: https://github.com/zsh-users/zsh-completions
     dest: "{{ zsh_custom }}/plugins/zsh-completions"
-    update: yes
+    update: true

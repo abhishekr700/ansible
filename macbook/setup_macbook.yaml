@@ -15,7 +15,8 @@
         path: ~/.zshrc
         line: 'eval "$(zoxide init --cmd cd zsh)"'
         state: present
-        create: yes
+        mode: '0644'
+        create: true
     - name: Insert/Update "Match User" configuration block in /etc/ssh/sshd_config prepending and appending a new line
       ansible.builtin.blockinfile:
         path: ~/.zshrc
