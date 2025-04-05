@@ -1,0 +1,19 @@
+---
+skip_list:
+  - experimental  # Skip experimental rules
+  # - yaml[truthy]  # Avoids warnings for "yes/no" values in YAML
+  - fqcn          # Skip enforcing fully qualified collection names
+  # - role-name     # Avoid role name linting
+  # - meta-incorrect  # Skips meta/main.yml strictness check
+  - yaml[indentation]
+
+warn_list:
+  - risky-shell-pipe  # Warns about unsafe shell commands
+  - no-handler        # Warns if tasks should have a handler
+  - var-naming        # Warns if variable names don't follow best practices
+
+# exclude_paths:
+  # - tests/  # Ignore test playbooks
+  # - roles/common/  # Example: ignore a common role directory
+
+verbosity: 1  # Standard verbosity level
