@@ -1,0 +1,40 @@
+---
+# tasks file for debian-shell-utilities
+- name: Installing Ubuntu/Debian Utilities
+  become: true
+  ansible.builtin.apt:
+    update_cache: no
+    pkg:
+      - wget
+      - curl
+      - iperf3
+      - p7zip-full
+      - htop
+      - iputils-ping
+      - gnupg
+      - cron
+- name: Installing utils for better shell - zsh,tmux
+  become: true
+  ansible.builtin.apt:
+    update_cache: no
+    pkg:
+      - tmux
+      - zsh
+- name: Installing git
+  become: true
+  ansible.builtin.apt:
+    update_cache: no
+    pkg:
+      - git
+- name: Terminal text editor - micro
+  become: true
+  ansible.builtin.apt:
+    update_cache: no
+    pkg:
+      - micro
+- name: Terminal file explorer - midnight-commander
+  become: true
+  ansible.builtin.apt:
+    update_cache: no
+    pkg:
+      - mc
