@@ -1,37 +1,22 @@
+---
 - name: Install common linux utilities
   community.general.homebrew:
-    name:
-      - wget
-      - curl
-      - git
+    name: "{{ item }}"
     state: present
-- name: Install micro - terminal text editor
+  loop:
+    - wget
+    - curl
+    - git
+- name: Install useful CLI tools via Homebrew
   community.general.homebrew:
-    name:
-      - micro
+    name: "{{ item.name }}"
     state: present
-- name: Install midnight commander - terminal file explorer
-  community.general.homebrew:
-    name:
-      - midnight-commander
-    state: present
-- name: Install fzf
-  community.general.homebrew:
-    name:
-      - fzf
-    state: present
-- name: Install zoxide
-  community.general.homebrew:
-    name:
-      - zoxide
-    state: present
-- name: Install gcloud
-  community.general.homebrew_cask:
-    name:
-      - google-cloud-sdk
-    state: present
-- name: Install ndcu (storage space analysis)
-  community.general.homebrew:
-    name:
-      - ncdu
-    state: present
+  loop:
+    - { name: "micro", desc: "micro - terminal text editor" }
+    - { name: "midnight-commander", desc: "midnight commander(mc) - terminal file explorer" }
+    - { name: "fzf", desc: "fzf - fuzzy finder" }
+    - { name: "zoxide", desc: "zoxide" }
+    - { name: "ncdu", desc: "ncdu - disk usage analyzer" }
+    - { name: "google-cloud-sdk", desc: "google cloud sdk" }
+  loop_control:
+    label: "{{ item.desc }}"
