@@ -18,5 +18,6 @@
     - { name: "zoxide", desc: "zoxide" }
     - { name: "ncdu", desc: "ncdu - disk usage analyzer" }
     - { name: "google-cloud-sdk", desc: "google cloud sdk" }
+    - { name: "yt-dlp", desc: "yt-dlp - youtube downloader" }
   loop_control:
     label: "{{ item.desc }}"
