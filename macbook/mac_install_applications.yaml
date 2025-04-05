@@ -1,0 +1,26 @@
+- name: Install dev apps iTerm2, VS Code
+  community.general.homebrew_cask:
+    name:
+      - iterm2
+      - visual-studio-code
+    state: present
+- name: Installing Spotify
+  community.general.homebrew_cask:
+    name:
+      - spotify
+    state: present
+- name: Installing browsers
+  community.general.homebrew_cask:
+    name:
+      - firefox
+    state: present
+- name: Installing Discord
+  community.general.homebrew_cask:
+    name:
+      - discord
+    state: present
+- name: Installing productivity apps - Notion
+  community.general.homebrew:
+    name:
+      - notion
+    state: present

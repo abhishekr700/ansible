@@ -1,0 +1,37 @@
+- name: Install common linux utilities
+  community.general.homebrew:
+    name:
+      - wget
+      - curl
+      - git
+    state: present
+- name: Install micro - terminal text editor
+  community.general.homebrew:
+    name:
+      - micro
+    state: present
+- name: Install midnight commander - terminal file explorer
+  community.general.homebrew:
+    name:
+      - midnight-commander
+    state: present
+- name: Install fzf
+  community.general.homebrew:
+    name:
+      - fzf
+    state: present
+- name: Install zoxide
+  community.general.homebrew:
+    name:
+      - zoxide
+    state: present
+- name: Install gcloud
+  community.general.homebrew_cask:
+    name:
+      - google-cloud-sdk
+    state: present
+- name: Install ndcu (storage space analysis)
+  community.general.homebrew:
+    name:
+      - ncdu
+    state: present

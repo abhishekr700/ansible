@@ -1,0 +1,42 @@
+- name: Fetch env variables
+  ansible.builtin.set_fact:
+    zsh_custom_path: "{{ lookup('env', 'ZSH_CUSTOM') }}"
+    zsh_path: "{{ lookup('env', 'ZSH') | ternary(lookup('env', 'ZSH') + '/custom', omit) }}"
+    home_path: "{{ lookup('env', 'HOME') }}/.oh-my-zsh/custom"
+# - name: Debug all env vars
+#   debug:
+#     msg: "'{{ zsh_custom_path }}' | '{{ zsh_path }}' | '{{ home_path }}'"
+- name: zsh_custom
+  ansible.builtin.set_fact:
+    zsh_custom: >-
+      {% if not lookup('vars', 'zsh_custom_path', default='') and not lookup('vars', 'zsh_path', default='') %}
+      {{ home_path }}
+      {% elif not lookup('vars', 'zsh_custom_path', default='') %}
+      {{ zsh_path }}
+      {% else %}
+      {{ zsh_custom_path }}
+      {% endif %}
+- name: Trim zsh_custom
+  ansible.builtin.set_fact:
+    zsh_custom: "{{ zsh_custom | trim }}"
+- name: Debug ZSH_CUSTOM
+  debug:
+    var: zsh_custom
+- name: Debug resolved plugin path
+  debug:
+    msg: "{{ zsh_custom }}/plugins/zsh-autosuggestions"
+- name: Clone zsh-autosuggestions plugin to oh-my-zsh plugins directory
+  git:
+    repo: https://github.com/zsh-users/zsh-autosuggestions
+    dest: "{{ zsh_custom }}/plugins/zsh-autosuggestions"
+    update: yes
+- name: Clone zsh-syntax-highlighting plugin to oh-my-zsh plugins directory
+  git:
+    repo: https://github.com/zsh-users/zsh-syntax-highlighting
+    dest: "{{ zsh_custom }}/plugins/zsh-syntax-highlighting"
+    update: yes
+- name: Clone zsh-completions plugin to oh-my-zsh plugins directory
+  git:
+    repo: https://github.com/zsh-users/zsh-completions
+    dest: "{{ zsh_custom }}/plugins/zsh-completions"
+    update: yes

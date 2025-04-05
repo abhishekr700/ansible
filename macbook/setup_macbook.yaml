@@ -1,0 +1,63 @@
+- name: Setup Mac
+  hosts: macbook-local
+
+  tasks:
+    - name: Install Terminal Utilities
+      import_tasks: mac_install_terminal_utils.yaml
+    - name: Install Oh My Zsh Plugins
+      import_tasks: mac_install_oh_my_zsh_plugins.yaml
+    - name: Install Applications
+      import_tasks: mac_install_applications.yaml
+    - name: Install Ansible
+      import_tasks: mac_setup_ansible.yaml
+    - name: Add a line to .zshrc if it does not exist
+      lineinfile:
+        path: ~/.zshrc
+        line: 'eval "$(zoxide init --cmd cd zsh)"'
+        state: present
+        create: yes
+    - name: Insert/Update "Match User" configuration block in /etc/ssh/sshd_config prepending and appending a new line
+      ansible.builtin.blockinfile:
+        path: ~/.zshrc
+        append_newline: true
+        prepend_newline: true
+        block: |
+          # https://www.baeldung.com/linux/bash-histsize-vs-histfilesize
+          # Max lines stored in history file
+          export HISTFILESIZE=10000
+          # Max lines stored in memory in a session. Intially loaded from HISTFILE
+          export HISTSIZE=5000
+
+          # Ignore duplicate commands and commands starting with a space
+          setopt HIST_IGNORE_ALL_DUPS  # Remove all previous entries of a duplicated command
+          setopt HIST_IGNORE_SPACE     # Ignore commands that start with a space
+          # zsh sessions will append their history list to the history file, rather than replace it.
+          # Thus, multiple parallel zsh sessions will all have the new entries from their history
+          # lists added to the history file, in the order that they exit.
+          setopt APPEND_HISTORY        # Append history instead of overwriting
+    - name: Enable oh-my-zsh plugins
+      ansible.builtin.blockinfile:
+        path: ~/.zshrc
+        append_newline: true
+        prepend_newline: true
+        marker: "# {mark} ANSIBLE MANAGED BLOCK FOR OH-MY-ZSH PLUGINS"
+        # marker_begin: oh-my-zsh plugins
+        # marker_end: oh-my-zsh plugins
+        block: |
+          plugins=(
+            # other plugins...
+            git
+            zsh-autosuggestions
+            zsh-completions
+            zsh-syntax-highlighting # This must be the last plugin for it's functionality
+          )
+          source $ZSH/oh-my-zsh.sh # Must be sourced after the plugins list
+    - name: Useful Aliases for Macbook
+      ansible.builtin.blockinfile:
+        path: ~/.zshrc
+        append_newline: true
+        prepend_newline: true
+        marker: "# {mark} ANSIBLE MANAGED BLOCK FOR aliases"
+        block: |
+          alias flushDnsCache="sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder; echo DNS Cache Cleared!"
+          alias ls=ls -alh
