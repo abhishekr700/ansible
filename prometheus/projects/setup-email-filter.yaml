@@ -1,0 +1,35 @@
+---
+- name: Setup Email Filter Script
+  hosts: nas
+  vars:
+    project_location_nas: "{{nas_projects_folder}}/emailFilterScript"
+  tasks:
+    - name: Clone repo
+      ansible.builtin.git:
+        repo: git@github.com:abhishekr700/email-filter-script.git
+        dest: "{{ project_location_nas }}"
+        accept_newhostkey: true
+    - name: Copy the .env file
+      ansible.builtin.copy:
+        src: "{{ local_env_folder }}/emailFilter.env"
+        dest: "{{ project_location_nas }}/.env"
+        mode: "0644"
+    # - name: Copy the .env file 2
+    #   ansible.builtin.copy:
+    #     src: "{{ local_env_folder }}/credentials-email-filter-script2.json"
+    #     dest: "{{project_location_nas}}/creds/credentials2.json"
+    # - name: Install packages using npm
+    #   community.general.npm:
+    #     path: "{{project_location_nas}}"
+    #     ci: true
+    # - name: Setup cron
+    #   ansible.builtin.cron:
+    #     name: Splitwise Expense Importer Job
+    #     minute: "0" # Run every hour
+    #     job: "cd {{project_location_nas}} && node index.js >> $(date +%Y-%m-%d-T%H%M%S).log 2>&1"
+    - name: Start service using docker-compose
+      # become: true
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_location_nas }}"
+        build: always
+        state: present

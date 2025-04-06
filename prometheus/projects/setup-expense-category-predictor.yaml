@@ -1,0 +1,27 @@
+---
+- name: Start Expense Category Predictor
+  hosts: nas
+  vars:
+    expense_category_predictor_dest: "{{nas_projects_folder}}/expenseCategoryPredictor"
+  tasks:
+    - name: Ping my hosts
+      ansible.builtin.ping:
+    - name: Copy the .env file
+      ansible.builtin.copy:
+        src: "{{ local_env_folder }}/expenseTracker.env"
+        dest: "{{ nas_projects_folder }}/.env"
+        mode: "0644"
+    - name: Clone the expenseCategoryPredictor
+      ansible.builtin.git:
+        repo: git@github.com:abhishekr700/expense-category-predictor.git
+        dest: "{{ expense_category_predictor_dest }}"
+    - name: Copy the models file to the clone folder
+      ansible.builtin.copy:
+        src: "{{ local_projects_folder }}/expenseCategoryPredictor/models/learner.pkl"
+        dest: "{{ expense_category_predictor_dest }}/models/learner.pkl"
+        mode: "0644"
+    - name: Start service using docker-compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ expense_category_predictor_dest }}"
+        state: present
+        build: always

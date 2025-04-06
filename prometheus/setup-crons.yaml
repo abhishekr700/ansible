@@ -1,0 +1,41 @@
+---
+- name: "Ensure cron and related directories exist"
+  become: true
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: abhi
+    group: abhi
+    mode: "0755"
+  loop:
+    - "{{ cron_dir }}"
+    - "{{ cron_logs_dir }}"
+    - "{{ cron_logs_dir }}/{{ prometheus_backup_cron_log_dir }}"
+    - "{{ cron_logs_dir }}/{{ prometheus_photos_backup_cron_log_dir }}"
+- name: Copy cron files
+  ansible.builtin.copy:
+    # src: "{{ local_crons_folder }}/{{ prometheus_backup_cron }}"
+    src: "{{ local_crons_folder }}/{{ item.script }}"
+    # dest: "{{ cron_dir }}/{{ prometheus_backup_cron }}"
+    dest: "{{ cron_dir }}/{{ item.script }}"
+    mode: "0744"
+    backup: false
+  loop:
+    - { name: "Prometheus backup cron", script: "{{ prometheus_backup_cron }}" }
+    - { name: "Photos backup cron", script: "{{ prometheus_photos_backup_cron }}" }
+- name: Add cron job to crontab
+  ansible.builtin.cron:
+    name: "{{ item.name }}"
+    minute: "{{ item.minute }}"
+    # job: "{{ cron_dir }}/{{ item.script }} >> {{ cron_logs_dir }}/{{ item.log_dir }}/$(date +\\%Y-\\%m-\\%d_\\%H-\\%M-\\%S).log 2>&1"
+    job: >
+      {{ cron_dir }}/{{ item.script }} 2>&1 |
+      tee -a {{ cron_logs_dir }}/{{ item.log_dir }}/$(date +\%Y-\%m-\%d_\%H-\%M-\%S).log |
+      systemd-cat -t "{{ item.name }}"
+    state: present
+  loop:
+    - { name: "Prometheus backup cron", minute: "9", script: "{{ prometheus_backup_cron }}", log_dir: "{{ prometheus_backup_cron_log_dir }}" }
+    - name: "Photos backup cron"
+      minute: "10"
+      script: "{{ prometheus_photos_backup_cron }}"
+      log_dir: "{{ prometheus_photos_backup_cron_log_dir }}"

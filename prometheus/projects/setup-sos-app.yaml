@@ -1,0 +1,26 @@
+---
+- name: Setup SOS App
+  hosts: nas
+  vars:
+    project_location_nas: "{{nas_projects_folder}}/sos-app"
+  tasks:
+    - name: Clone repo
+      ansible.builtin.git:
+        repo: git@github.com:abhishekr700/sos-app.git
+        dest: "{{ project_location_nas }}"
+        accept_newhostkey: true
+    - name: Copy the .env file
+      ansible.builtin.copy:
+        src: "{{ local_env_folder }}/sosApp.env"
+        dest: "{{ project_location_nas }}/.env"
+        mode: "0644"
+    - name: Copy the data file
+      ansible.builtin.copy:
+        src: "{{ local_env_folder }}/sosAppData.txt"
+        dest: "{{ project_location_nas }}/data.txt"
+        mode: "0644"
+    - name: Start service using docker-compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_location_nas }}"
+        build: always
+        state: present

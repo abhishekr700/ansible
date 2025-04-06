@@ -1,0 +1,10 @@
+---
+- name: Check if user abhi already has ZFS snapshot permissions
+  ansible.builtin.command: "zfs allow zfspool"
+  register: zfs_permissions
+  changed_when: false
+
+- name: Grant snapshot permissions to abhi if not already set
+  become: true
+  ansible.builtin.command: "zfs allow abhi destroy,snapshot zfspool"
+  when: "'destroy,mount,snapshot' not in zfs_permissions.stdout"

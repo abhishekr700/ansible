@@ -1,0 +1,21 @@
+---
+- name: Setup Splitwise Expense Importer
+  hosts: nas
+  vars:
+    project_location_nas: "{{nas_projects_folder}}/splitwiseExpenseImporter"
+  tasks:
+    - name: Clone repo
+      ansible.builtin.git:
+        repo: git@github.com:abhishekr700/expense-splitwise-bridge.git
+        dest: "{{ project_location_nas }}"
+        accept_newhostkey: true
+    - name: Copy the .env file
+      ansible.builtin.copy:
+        src: "{{ local_env_folder }}/expenseImporter.env"
+        dest: "{{ project_location_nas }}/.env"
+        mode: "0644"
+    - name: Setup cron
+      ansible.builtin.cron:
+        name: Splitwise Expense Importer Job
+        minute: "0" # Run every hour
+        job: "cd '{{ project_location_nas }}' && node import.js >> logs/$(date +\\%Y-\\%m-\\%d-T\\%H\\%M\\%S).log 2>&1"

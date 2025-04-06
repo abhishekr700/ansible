@@ -1,0 +1,20 @@
+---
+- name: Start Expense Tracker
+  hosts: nas
+  vars:
+    expense_category_predictor_dest: "{{vm_project_folder}}/expenseTracker"
+  tasks:
+    - name: Copy the .env file
+      ansible.builtin.copy:
+        src: "{{ local_env_folder }}/expenseTracker.env"
+        dest: "{{ vm_project_folder }}/expenseTracker/.env"
+        mode: "0644"
+    - name: Clone the expense tracker project code
+      ansible.builtin.git:
+        repo: git@github.com:abhishekr700/expenseTracker.git
+        dest: "{{ expense_category_predictor_dest }}"
+    - name: Start service using docker-compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ expense_category_predictor_dest }}"
+        build: always
+        state: present

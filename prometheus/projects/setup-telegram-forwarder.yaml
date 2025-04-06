@@ -1,0 +1,20 @@
+---
+- name: Setup Telegram Forwarder
+  hosts: nas
+  tasks:
+    - name: Clone repo
+      ansible.builtin.git:
+        repo: git@github.com:abhishekr700/telegramForwarder.git
+        dest: "{{ nas_projects_folder }}/telegramForwarder"
+        mode: "0644"
+        accept_newhostkey: true
+    - name: Copy the .env file
+      ansible.builtin.copy:
+        src: "{{ local_env_folder }}/telegramForwarder.env"
+        dest: "{{ nas_projects_folder }}/telegramForwarder/.env"
+        mode: "0644"
+    - name: Start service using docker-compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ nas_projects_folder }}/telegramForwarder"
+        build: always
+        state: present

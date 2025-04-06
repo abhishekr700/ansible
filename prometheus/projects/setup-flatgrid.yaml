@@ -1,0 +1,16 @@
+---
+- name: Setup Flatgrid
+  hosts: public
+  vars:
+    project_location_nas: "/home/abhi/flatgrid-service"
+  tasks:
+    - name: Clone repo
+      ansible.builtin.git:
+        repo: git@github.com:abhishekr700/flatgrid-service.git
+        dest: "{{ project_location_nas }}"
+        accept_newhostkey: true
+    - name: Start service using docker-compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_location_nas }}"
+        build: always
+        state: present

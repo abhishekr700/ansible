@@ -1,0 +1,11 @@
+---
+# - name: Setup personal projects on prometheus
+#   hosts: prometheus
+- name: Expense Importer
+  ansible.builtin.import_playbook: projects/setup-expense-importer.yaml
+- name: Telegram Forwarder
+  ansible.builtin.import_playbook: projects/setup-telegram-forwarder.yaml
+- name: Expense tracker
+  ansible.builtin.import_playbook: projects/setup-expense-tracker.yaml
+- name: Email Filter
+  ansible.builtin.import_playbook: projects/setup-email-filter.yaml
