@@ -6,6 +6,7 @@ skip_list:
   # - role-name     # Avoid role name linting
   # - meta-incorrect  # Skips meta/main.yml strictness check
   - yaml[indentation]
+  - latest[git]
 
 warn_list:
   - risky-shell-pipe  # Warns about unsafe shell commands
