@@ -12,6 +12,8 @@
     - "{{ cron_logs_dir }}"
     - "{{ cron_logs_dir }}/{{ prometheus_backup_cron_log_dir }}"
     - "{{ cron_logs_dir }}/{{ prometheus_photos_backup_cron_log_dir }}"
+    - "{{ cron_logs_dir }}/{{ prometheus_backup_sync_onedrive_cron_log_dir }}"
+    - "{{ cron_logs_dir }}/{{ prometheus_photos_backup_sync_onedrive_cron_log_dir }}"
 - name: Copy cron files
   ansible.builtin.copy:
     # src: "{{ local_crons_folder }}/{{ prometheus_backup_cron }}"
@@ -23,6 +25,8 @@
   loop:
     - { name: "Prometheus backup cron", script: "{{ prometheus_backup_cron }}" }
     - { name: "Photos backup cron", script: "{{ prometheus_photos_backup_cron }}" }
+    - { name: "Prometheus backup sync onedrive cron", script: "{{ prometheus_backup_sync_onedrive_cron }}" }
+    - { name: "Photos backup sync onedrive cron", script: "{{ prometheus_photos_backup_sync_onedrive_cron }}" }
 - name: Add cron job to crontab
   ansible.builtin.cron:
     name: "{{ item.name }}"
@@ -39,3 +43,11 @@
       minute: "10"
       script: "{{ prometheus_photos_backup_cron }}"
       log_dir: "{{ prometheus_photos_backup_cron_log_dir }}"
+    - name: "Prometheus backup sync onedrive cron"
+      minute: "15"
+      script: "{{ prometheus_backup_sync_onedrive_cron }}"
+      log_dir: "{{ prometheus_backup_sync_onedrive_cron_log_dir }}"
+    - name: "Photos backup sync onedrive cron"
+      minute: "20"
+      script: "{{ prometheus_photos_backup_sync_onedrive_cron }}"
+      log_dir: "{{ prometheus_photos_backup_sync_onedrive_cron_log_dir }}"

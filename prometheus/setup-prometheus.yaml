@@ -8,14 +8,20 @@
     prometheus_backup_cron: "prometheus_backup.sh"
     prometheus_backup_cron_log_dir: "prometheus-backup-cron"
 
+    prometheus_backup_sync_onedrive_cron: "prometheus_backup_sync_onedrive.sh"
+    prometheus_backup_sync_onedrive_cron_log_dir: "prometheus-backup-sync-onedrive-cron"
+
     prometheus_photos_backup_cron: "prometheus_photos_backup.sh"
     prometheus_photos_backup_cron_log_dir: "prometheus-photos-backup-cron"
+
+    prometheus_photos_backup_sync_onedrive_cron: "prometheus_photos_backup_sync_onedrive.sh"
+    prometheus_photos_backup_sync_onedrive_cron_log_dir: "prometheus-photos-backup-sync-onedrive-cron"
 
     cron_dir: "/opt/crons"
     cron_logs_dir: "/var/log/crons"
   tasks:
-    # - name: Include ZSH configuration tasks
-    # include_tasks: ../tasks/debian-ubuntu-common/zsh-config.yaml
+    - name: Include ZSH configuration tasks
+      include_tasks: ../tasks/debian-ubuntu-common/zsh-config.yaml
     - name: ZFS configurations
       include_tasks: zfs-config.yaml
     - name: Setup crons

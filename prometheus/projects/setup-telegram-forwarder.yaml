@@ -6,7 +6,6 @@
       ansible.builtin.git:
         repo: git@github.com:abhishekr700/telegramForwarder.git
         dest: "{{ nas_projects_folder }}/telegramForwarder"
-        mode: "0644"
         accept_newhostkey: true
     - name: Copy the .env file
       ansible.builtin.copy:
