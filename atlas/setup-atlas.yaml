@@ -1,0 +1,9 @@
+---
+- name: Setup Atlas
+  hosts: atlas
+  vars:
+    vm_project_folder: "/home/ubuntu/projects"
+  gather_facts: true
+  roles:
+    - debian-shell-utilities
+    - debian-install-docker
