@@ -1,9 +1,10 @@
 ---
 - name: Setup nas
   hosts: prometheus
-  # roles:
-  #   - git-setup
-  #   - debian-shell-utilities
+  roles:
+    - git-setup
+    - debian-shell-utilities
+    - debian-install-docker
   vars:
     prometheus_backup_cron: "prometheus_backup.sh"
     prometheus_backup_cron_log_dir: "prometheus-backup-cron"
@@ -26,23 +27,11 @@
       include_tasks: zfs-config.yaml
     - name: Setup crons
       include_tasks: setup-crons.yaml
-# - name: Install python3
-#   become: true
-#   ansible.builtin.apt:
-#     update_cache: false
-#         pkg:
-#           - python3
-#           - python3-dev
-#           - python3-pip
-#           - python3-setuptools
-#           - python3-docker
-#     - name: Installing Special Purpose Utilities
-#       become: true
-#       ansible.builtin.apt:
-#         update_cache: no
-#         pkg:
-#           - aria2
-#           - fzf
+    - name: Installing Special Purpose Utilities
+      become: true
+      ansible.builtin.apt:
+        pkg:
+          - aria2
 # - name: Install NodeJS with it's playbook
 #   ansible.builtin.import_playbook: setup/setupNasNodejs.yaml
 
