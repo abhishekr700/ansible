@@ -1,0 +1,13 @@
+---
+- name: Setup nas
+  hosts: bifrost
+  roles:
+    - debian-shell-utilities
+    - debian-install-docker
+  tasks:
+    - name: Installing Tailscale
+      become: true
+      ansible.builtin.apt:
+        update_cache: false
+        pkg:
+          - tailscale
