@@ -13,25 +13,24 @@
       - iputils-ping
       - gnupg
       - cron
+      - git
+      - python3
+      - python3-setuptools
 - name: Installing utils for better shell - zsh,tmux
   become: true
   ansible.builtin.apt:
-    update_cache: false
     pkg:
       - tmux
       - zsh
-- name: Installing git
+- name: Install useful CLI tools
   become: true
   ansible.builtin.apt:
-    pkg:
-      - git
-- name: Terminal text editor - micro
-  become: true
-  ansible.builtin.apt:
-    pkg:
-      - micro
-- name: Terminal file explorer - midnight-commander
-  become: true
-  ansible.builtin.apt:
-    pkg:
-      - mc
+    pkg: "{{ item.name }}"
+  loop:
+    - { name: "micro", desc: "micro - terminal text editor" }
+    - { name: "mc", desc: "midnight commander(mc) - terminal file explorer" }
+    - { name: "fzf", desc: "fzf - fuzzy finder" }
+    - { name: "zoxide", desc: "zoxide" }
+    - { name: "ncdu", desc: "ncdu - disk usage analyzer" }
+  loop_control:
+    label: "{{ item.desc }}"
