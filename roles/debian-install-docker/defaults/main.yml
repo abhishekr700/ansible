@@ -1,0 +1,15 @@
+---
+# Default user to add to docker group
+docker_user: "{{ ansible_user }}"
+
+# Default Docker daemon configuration
+docker_daemon_config:
+  log-driver: "json-file"
+  log-opts:
+    max-size: "100m"
+    max-file: "3"
+  default-ulimits:
+    nofile:
+      name: "nofile"
+      hard: 64000
+      soft: 64000

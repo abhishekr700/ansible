@@ -1,0 +1,90 @@
+---
+# Latest instructions at https://docs.docker.com/engine/install/debian/#install-using-the-repository
+# if playbook doesn't work, consult above
+
+- name: Install linux utilities
+  become: true
+  ansible.builtin.apt:
+    pkg:
+      - gnupg
+
+- name: Set OS type variable (Debian/Ubuntu)
+  set_fact:
+    os_type: "{{ ansible_facts['distribution'] | lower }}"
+
+- name: "Add docker GPG apt key"
+  become: true
+  apt_key:
+    url: "https://download.docker.com/linux/{{ os_type }}/gpg"
+    state: present
+  register: gpg_result
+  retries: 3
+  delay: 5
+  until: gpg_result is success
+
+- name: Get system architecture
+  command: dpkg --print-architecture
+  register: architecture_output
+  changed_when: false
+
+- name: Add Docker Repository
+  become: true
+  apt_repository:
+    repo: "deb [arch={{ architecture_output.stdout }}] https://download.docker.com/linux/{{ os_type }} {{ ansible_distribution_release }} stable"
+    state: present
+    update_cache: true
+  register: repo_result
+  retries: 3
+  delay: 5
+  until: repo_result is success
+
+- name: Install Docker
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    pkg:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+  register: docker_install
+  retries: 3
+  delay: 5
+  until: docker_install is success
+
+- name: Ensure Docker group exists
+  become: true
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: Add User to docker group
+  become: true
+  ansible.builtin.user:
+    name: "{{ docker_user | default(ansible_user) }}"
+    groups: docker
+    append: true
+
+- name: Create Docker daemon configuration directory
+  become: true
+  file:
+    path: /etc/docker
+    state: directory
+    mode: "0755"
+
+- name: Configure Docker daemon
+  become: true
+  copy:
+    dest: /etc/docker/daemon.json
+    content: "{{ docker_daemon_config | to_nice_json }}"
+    mode: "0644"
+  notify: restart docker
+
+- name: Ensure Docker service is running and enabled
+  become: true
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true

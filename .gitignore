@@ -1,3 +1,5 @@
 .vscode/*
 .venv/*
 .ansible/*
+**test_key*
+**test_key.pub

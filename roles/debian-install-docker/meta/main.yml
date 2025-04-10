@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  author: Abhishek Ranjan
+  description: Install Docker on Debian/Ubuntu systems
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+  galaxy_tags:
+    - docker
+    - container
+    - debian
+    - ubuntu
+
+dependencies: []

@@ -1,0 +1,91 @@
+---
+- name: Test Docker installation role
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Create test container
+      community.docker.docker_container:
+        name: ansible-test-debian
+        image: ubuntu:22.04
+        state: started
+        command: sleep infinity
+        detach: true
+        published_ports:
+          - "2222:22"
+      register: test_container
+
+    - name: Wait for container to be ready
+      ansible.builtin.wait_for:
+        timeout: 10
+
+    - name: Generate SSH key for testing
+      ansible.builtin.shell: |
+        ssh-keygen -t rsa -b 2048 -f {{ playbook_dir }}/test_key -N ""
+      args:
+        creates: "{{ playbook_dir }}/test_key"
+
+    - name: Add test container to inventory
+      ansible.builtin.add_host:
+        name: test-debian
+        ansible_host: "127.0.0.1"
+        ansible_port: 2222
+        ansible_user: root
+        ansible_ssh_private_key_file: "{{ playbook_dir }}/test_key"
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+    - name: Setup SSH in container
+      ansible.builtin.shell: |
+        docker exec ansible-test-debian mkdir -p /root/.ssh
+        docker cp {{ playbook_dir }}/test_key.pub ansible-test-debian:/root/.ssh/authorized_keys
+        docker exec ansible-test-debian chmod 700 /root/.ssh
+        docker exec ansible-test-debian chmod 600 /root/.ssh/authorized_keys
+        docker exec ansible-test-debian chown root:root /root/.ssh /root/.ssh/authorized_keys
+        docker exec ansible-test-debian apt-get update
+        docker exec ansible-test-debian apt-get install -y openssh-server
+        docker exec ansible-test-debian service ssh start
+
+- name: Test Docker role
+  hosts: test-debian
+  become: true
+  roles:
+    - role: debian-install-docker
+      vars:
+        docker_user: root
+        docker_daemon_config:
+          log-driver: "json-file"
+          log-opts:
+            max-size: "50m"
+            max-file: "2"
+          default-ulimits:
+            nofile:
+              name: "nofile"
+              hard: 32000
+              soft: 32000
+
+  post_tasks:
+    - name: Verify Docker installation
+      ansible.builtin.shell: docker --version
+      register: docker_version
+
+    - name: Display Docker version
+      ansible.builtin.debug:
+        var: docker_version.stdout
+
+    - name: Read daemon.json contents
+      ansible.builtin.slurp:
+        src: /etc/docker/daemon.json
+      register: daemon_json
+
+    - name: Display daemon.json contents
+      ansible.builtin.debug:
+        msg: "{{ daemon_json.content | b64decode | from_json | to_nice_json }}"
+
+- name: Clean up
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Remove test container
+      community.docker.docker_container:
+        name: ansible-test-debian
+        state: absent
+      when: cleanup_test_container | default(true)
