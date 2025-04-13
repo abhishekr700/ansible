@@ -1,5 +1,9 @@
+---
 - name: Setup Mac
   hosts: macbook-local
+
+  roles:
+    - git-setup
 
   tasks:
     - name: Install Terminal Utilities
@@ -15,7 +19,7 @@
         path: ~/.zshrc
         line: 'eval "$(zoxide init --cmd cd zsh)"'
         state: present
-        mode: '0644'
+        mode: "0644"
         create: true
     - name: Insert/Update "Match User" configuration block in /etc/ssh/sshd_config prepending and appending a new line
       ansible.builtin.blockinfile:
