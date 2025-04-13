@@ -6,6 +6,12 @@
     - debian-shell-utilities
     - debian-install-docker
   vars:
+    prometheus_user: "abhi"
+    prometheus_group: "abhi"
+
+    prometheus_compose_dir: "/zfspool/containers"
+    prometheus_docker_volumes_dir: "/zfspool/docker-volumes"
+
     prometheus_backup_cron: "prometheus_backup.sh"
     prometheus_backup_cron_log_dir: "prometheus-backup-cron"
 
@@ -21,6 +27,8 @@
     cron_dir: "/opt/crons"
     cron_logs_dir: "/var/log/crons"
   tasks:
+    - name: Setup folder structure
+      include_tasks: setup-folder-structure.yaml
     - name: Include ZSH configuration tasks
       include_tasks: ../tasks/debian-ubuntu-common/zsh-config.yaml
     - name: ZFS configurations
@@ -32,8 +40,10 @@
       ansible.builtin.apt:
         pkg:
           - aria2
+    - name: Setup karakeep
+      include_tasks: setup-karakeep.yaml
 # - name: Install NodeJS with it's playbook
 #   ansible.builtin.import_playbook: setup/setupNasNodejs.yaml
 
-- name: Setup projects
-  ansible.builtin.import_playbook: setup-projects-on-prometheus.yaml
+# - name: Setup projects
+#   ansible.builtin.import_playbook: setup-projects-on-prometheus.yaml

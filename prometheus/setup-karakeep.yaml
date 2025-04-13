@@ -1,0 +1,41 @@
+- name: Create karakeep compose directory
+  ansible.builtin.file:
+    path: "{{ prometheus_compose_dir }}/karakeep"
+    state: directory
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: "0755"
+
+- name: Copy karakeep compose file
+  ansible.builtin.copy:
+    src: "../compose/karakeep.yaml"
+    dest: "{{ prometheus_compose_dir }}/karakeep/compose.yaml"
+    mode: "0644"
+
+- name: Copy the karakeep .env file
+  ansible.builtin.copy:
+    src: "{{ local_env_folder }}/karakeep.env"
+    dest: "{{ prometheus_compose_dir }}/karakeep/.env"
+    mode: "0644"
+
+- name: Create karakeep data directory
+  ansible.builtin.file:
+    path: "{{ prometheus_docker_volumes_dir }}/karakeep/data"
+    state: directory
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: "0755"
+
+- name: Create karakeep meilisearch directory
+  ansible.builtin.file:
+    path: "{{ prometheus_docker_volumes_dir }}/karakeep/meilisearch"
+    state: directory
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: "0755"
+
+- name: Start karakeep using docker compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ prometheus_compose_dir }}/karakeep"
+    build: always
+    state: present

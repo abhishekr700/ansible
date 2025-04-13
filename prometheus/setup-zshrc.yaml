@@ -1,0 +1,11 @@
+- name: ".zshrc config"
+  ansible.builtin.blockinfile:
+    path: ~/.zshrc
+    append_newline: true
+    prepend_newline: true
+    marker: "# {mark} ANSIBLE MANAGED BLOCK FOR zsh shell variables"
+    block: |-
+
+      # Shell variables needed for docker containers
+      export UID=$(id -u)
+      export GID=$(id -g)

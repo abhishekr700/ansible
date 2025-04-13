@@ -1,0 +1,15 @@
+- name: Create prometheus compose directory
+  ansible.builtin.file:
+    path: "{{ prometheus_compose_dir }}"
+    state: directory
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: "0755"
+
+- name: Create prometheus docker volumes directory
+  ansible.builtin.file:
+    path: "{{ prometheus_docker_volumes_dir }}"
+    state: directory
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: "0755"
