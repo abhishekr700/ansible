@@ -2,8 +2,24 @@
 - name: Setup Atlas
   hosts: atlas
   vars:
-    vm_project_folder: "/home/ubuntu/projects"
+    atlas_project_folder: "/home/ubuntu/projects"
+
+    atlas_crons_folder: "/opt/crons"
+    atlas_cron_logs_dir: "/var/log/crons"
+
+    atlas_backup_cron: "atlas_backup.sh"
+    atlas_backup_cron_log_dir: "atlas-backup-cron"
+
+    atlas_backup_sync_onedrive_cron: "atlas_backup_sync_onedrive.sh"
+    atlas_backup_sync_onedrive_cron_log_dir: "atlas-backup-sync-onedrive-cron"
   gather_facts: true
   roles:
     - debian-shell-utilities
     - debian-install-docker
+
+  tasks:
+    - name: Install additional tools
+      ansible.builtin.include_tasks: setup-atlas-tools.yaml
+
+    - name: Setup Atlas crons
+      ansible.builtin.include_tasks: setup-atlas-crons.yaml
