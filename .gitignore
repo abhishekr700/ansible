@@ -3,3 +3,4 @@
 .ansible/*
 **test_key*
 **test_key.pub
+kolfi/*

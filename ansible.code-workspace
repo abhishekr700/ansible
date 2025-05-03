@@ -1,0 +1,19 @@
+{
+  "folders": [
+    {
+      "path": "."
+    },
+    {
+      "path": "../00Env"
+    },
+    {
+      "path": "../../../2NasMirror/containers"
+    },
+    {
+      "path": "../../05NAS/crons"
+    }
+  ],
+  "settings": {
+    "ansible.python.interpreterPath": "/usr/local/bin/python3"
+  }
+}
