@@ -40,9 +40,9 @@
         script: "{{ bifrost_backup_cron }}",
         log_dir: "{{ bifrost_backup_cron_log_dir }}",
       }
-    # - {
-    #     name: "Bifrost backup sync onedrive cron",
-    #     minute: "15",
-    #     script: "{{ bifrost_backup_sync_onedrive_cron }}",
-    #     log_dir: "{{ bifrost_backup_sync_onedrive_cron_log_dir }}",
-    #   }
+    - {
+        name: "Bifrost backup sync onedrive cron",
+        minute: "15",
+        script: "{{ bifrost_backup_sync_onedrive_cron }}",
+        log_dir: "{{ bifrost_backup_sync_onedrive_cron_log_dir }}",
+      }
