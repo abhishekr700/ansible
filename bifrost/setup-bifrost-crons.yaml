@@ -1,0 +1,48 @@
+---
+- name: "Ensure cron and related directories exist"
+  become: true
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+  loop:
+    - "{{ bifrost_crons_folder }}"
+    - "{{ bifrost_cron_logs_dir }}"
+    - "{{ bifrost_cron_logs_dir }}/{{ bifrost_backup_cron_log_dir }}"
+    - "{{ bifrost_cron_logs_dir }}/{{ bifrost_backup_sync_onedrive_cron_log_dir }}"
+- name: Copy cron files
+  ansible.builtin.copy:
+    src: "{{ local_crons_folder }}/{{ item.script }}"
+    dest: "{{ bifrost_crons_folder }}/{{ item.script }}"
+    mode: "0744"
+    backup: false
+  loop:
+    - { name: "Bifrost backup cron", script: "{{ bifrost_backup_cron }}" }
+    - {
+        name: "Bifrost backup sync onedrive cron",
+        script: "{{ bifrost_backup_sync_onedrive_cron }}",
+      }
+- name: Add cron job to crontab
+  ansible.builtin.cron:
+    name: "{{ item.name }}"
+    minute: "{{ item.minute }}"
+    job: >
+      {{ bifrost_crons_folder }}/{{ item.script }} 2>&1 |
+      tee -a {{ bifrost_cron_logs_dir }}/{{ item.log_dir }}/$(date +\%Y-\%m-\%d_\%H-\%M-\%S).log |
+      systemd-cat -t "{{ item.name }}"
+    state: present
+  loop:
+    - {
+        name: "Bifrost backup cron",
+        minute: "10",
+        script: "{{ bifrost_backup_cron }}",
+        log_dir: "{{ bifrost_backup_cron_log_dir }}",
+      }
+    # - {
+    #     name: "Bifrost backup sync onedrive cron",
+    #     minute: "15",
+    #     script: "{{ bifrost_backup_sync_onedrive_cron }}",
+    #     log_dir: "{{ bifrost_backup_sync_onedrive_cron_log_dir }}",
+    #   }

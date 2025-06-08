@@ -1,0 +1,5 @@
+- name: Install borgbackup
+  become: true
+  apt:
+    name: borgbackup
+    state: present

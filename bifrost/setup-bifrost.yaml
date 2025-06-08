@@ -1,9 +1,21 @@
 ---
 - name: Setup nas
   hosts: bifrost
+  vars:
+    bifrost_crons_folder: "/opt/crons"
+    bifrost_cron_logs_dir: "/var/log/crons"
+
+    bifrost_backup_cron: "bifrost_backup.sh"
+    bifrost_backup_cron_log_dir: "bifrost_backup"
+
+    bifrost_backup_sync_onedrive_cron: "bifrost_backup_sync_onedrive.sh"
+    bifrost_backup_sync_onedrive_cron_log_dir: "bifrost_backup_sync_onedrive"
   roles:
     - debian-shell-utilities
     - debian-install-docker
+    - role: stefangweichinger.ansible_rclone
+      rclone_fact_path: "{{ ansible_env.HOME }}/rclone/.config/ansible/facts.d/rclone.fact"
+      become: true
   tasks:
     - name: Installing Tailscale
       become: true
@@ -11,3 +23,7 @@
         update_cache: false
         pkg:
           - tailscale
+    - name: Install additional tools
+      ansible.builtin.include_tasks: setup-bifrost-tools.yaml
+    - name: Setup Bifrost crons
+      ansible.builtin.include_tasks: setup-bifrost-crons.yaml
