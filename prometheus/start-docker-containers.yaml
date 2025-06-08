@@ -1,0 +1,22 @@
+---
+- name: Start docker containers on prometheus
+  hosts: prometheus
+  tasks:
+    - name: "Starting containers"
+      community.docker.docker_compose_v2:
+        project_src: "{{ item.path }}"
+        state: present
+      loop:
+        - { name: "Arr Stack", path: "/zfspool/containers/sonarr" }
+        - {
+            name: "CouchDB - Obsidian Sync",
+            path: "/zfspool/containers/couchdb",
+          }
+        - { name: "Homeassistant", path: "/zfspool/containers/homeassistant" }
+        - { name: "Homepage", path: "/zfspool/containers/homepage" }
+        - { name: "Immich Stack", path: "/zfspool/containers/immich" }
+        - { name: "Portainer", path: "/zfspool/containers/portainer" }
+        - { name: "Syncthing", path: "/zfspool/containers/syncthing" }
+
+      loop_control:
+        label: "{{ item.name }}"
