@@ -7,17 +7,29 @@
     - wget
     - curl
     - git
+- name: Tap HashiCorp repository
+  community.general.homebrew_tap:
+    name: hashicorp/tap
 - name: Install useful CLI tools via Homebrew
   community.general.homebrew:
     name: "{{ item.name }}"
     state: present
   loop:
     - { name: "micro", desc: "micro - terminal text editor" }
-    - { name: "midnight-commander", desc: "midnight commander(mc) - terminal file explorer" }
+    - {
+        name: "midnight-commander",
+        desc: "midnight commander(mc) - terminal file explorer",
+      }
     - { name: "fzf", desc: "fzf - fuzzy finder" }
     - { name: "zoxide", desc: "zoxide" }
     - { name: "ncdu", desc: "ncdu - disk usage analyzer" }
     - { name: "google-cloud-sdk", desc: "google cloud sdk" }
     - { name: "yt-dlp", desc: "yt-dlp - youtube downloader" }
+    - { name: "pnpm", desc: "Fast, disk space efficient package manager" }
+    - {
+        name: "hashicorp/tap/terraform",
+        desc: "Terraform - Infrastructure as Code tool",
+      }
+    - { name: "oci-cli", desc: "oci-cli - oracle cloud infrastructure cli" }
   loop_control:
     label: "{{ item.desc }}"
