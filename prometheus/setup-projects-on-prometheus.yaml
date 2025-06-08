@@ -9,3 +9,7 @@
   ansible.builtin.import_playbook: projects/setup-expense-tracker.yaml
 - name: Email Filter
   ansible.builtin.import_playbook: projects/setup-email-filter.yaml
+- name: Expense Category Predictor
+  ansible.builtin.import_playbook: projects/setup-expense-category-predictor.yaml
+- name: Setup SOS App
+  ansible.builtin.import_playbook: projects/setup-sos-app.yaml
