@@ -23,7 +23,7 @@
     - { name: "fzf", desc: "fzf - fuzzy finder" }
     - { name: "zoxide", desc: "zoxide" }
     - { name: "ncdu", desc: "ncdu - disk usage analyzer" }
-    - { name: "google-cloud-sdk", desc: "google cloud sdk" }
+    - { name: "gcloud-cli", desc: "google cloud sdk" }
     - { name: "yt-dlp", desc: "yt-dlp - youtube downloader" }
     - { name: "pnpm", desc: "Fast, disk space efficient package manager" }
     - {

@@ -54,6 +54,7 @@
             git
             zsh-autosuggestions
             zsh-completions
+            fzf
             zsh-syntax-highlighting # This must be the last plugin for it's functionality
           )
           source $ZSH/oh-my-zsh.sh # Must be sourced after the plugins list
