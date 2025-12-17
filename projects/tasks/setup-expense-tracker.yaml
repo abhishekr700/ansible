@@ -1,0 +1,14 @@
+- name: Clone the expense tracker project code
+  ansible.builtin.git:
+    repo: git@github.com:abhishekr700/expenseTracker.git
+    dest: "{{ expense_category_predictor_dest }}"
+- name: Copy the .env file
+  ansible.builtin.copy:
+    src: "{{ local_env_folder }}/expenseTracker.env"
+    dest: "{{ expense_category_predictor_dest }}/.env"
+    mode: "0644"
+- name: Start service using docker-compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ expense_category_predictor_dest }}"
+    build: always
+    state: present

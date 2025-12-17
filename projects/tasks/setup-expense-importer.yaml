@@ -3,6 +3,10 @@
     repo: git@github.com:abhishekr700/expense-splitwise-bridge.git
     dest: "{{ project_location }}"
     accept_newhostkey: true
+- name: Install npm dependencies
+  community.general.npm:
+    path: "{{ project_location }}"
+    ci: true
 - name: Copy the .env file
   ansible.builtin.copy:
     src: "{{ local_env_folder }}/expenseImporter.env"
