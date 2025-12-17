@@ -1,0 +1,5 @@
+---
+- name: Create expense-network
+  community.docker.docker_network:
+    name: expense-network
+    state: present

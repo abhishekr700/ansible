@@ -1,0 +1,18 @@
+- name: Create compose files directory
+  ansible.builtin.file:
+    path: "{{ docker_compose_folder }}"
+    state: directory
+    owner: "{{ pi_user }}"
+    group: "{{ pi_group }}"
+    mode: "0755"
+
+- name: Create docker volumes directory
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ pi_user }}"
+    group: "{{ pi_group }}"
+    mode: "0755"
+  loop:
+    - "{{ docker_volumes_folder }}"
+    - "{{ projects_location }}"

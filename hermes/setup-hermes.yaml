@@ -1,0 +1,55 @@
+---
+- name: Setup hermes
+  hosts: hermes
+  vars:
+    pi_user: abhi
+    pi_group: abhi
+
+    projects_location: /home/abhi/projects
+
+    docker_compose_folder: /home/abhi/compose-files
+    docker_volumes_folder: /home/abhi/docker-volumes
+  roles:
+    - roles/debian-install-docker
+    - nodejs-setup
+  tasks:
+    # - name: Enable IP forwarding for Tailscale
+    #   become: true
+    #   ansible.posix.sysctl:
+    #     name: "{{ item.key }}"
+    #     value: "{{ item.value }}"
+    #     sysctl_file: /etc/sysctl.d/99-tailscale.conf
+    #     state: present
+    #     reload: yes
+    #   loop:
+    #     - { key: "net.ipv4.ip_forward", value: "1" }
+    #     - { key: "net.ipv6.conf.all.forwarding", value: "1" }
+
+    # - name: Ensure 'docker' group exists
+    #   ansible.builtin.group:
+    #     name: docker
+    #     state: present
+
+    # - name: Add user 'abhi' to the 'docker' group
+    #   become: true
+    #   ansible.builtin.user:
+    #     name: "{{ pi_user }}"
+    #     groups: docker
+    #     append: yes
+
+    # - name: Setup Adguard
+    #   ansible.builtin.include_tasks: setup-adguard.yaml
+
+    - name: Setup folders
+      ansible.builtin.include_tasks: setup-folders.yaml
+    - name: Setup docker networks
+      ansible.builtin.include_tasks: setup-docker-networks.yaml
+    # - name: Setup expense importer
+    #   vars:
+    #     project_location: "{{ projects_location }}/expense-splitwise-bridge"
+    #   ansible.builtin.include_tasks: ../projects/tasks/setup-expense-importer.yaml
+    - name: Setup expense tracker
+      vars:
+        vm_project_folder: "{{ projects_location }}"
+        expense_category_predictor_dest: "{{ vm_project_folder }}/expense-tracker"
+      ansible.builtin.include_tasks: ../projects/tasks/setup-expense-tracker.yaml

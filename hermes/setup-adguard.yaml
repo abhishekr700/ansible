@@ -1,0 +1,66 @@
+- name: Create folders for adguard home
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ pi_user }}"
+    group: "{{ pi_group }}"
+    mode: "0755"
+  loop:
+    - "{{ docker_compose_folder }}/adguard-home"
+    - "{{ docker_volumes_folder }}/adguard-home/work"
+    - "{{ docker_volumes_folder }}/adguard-home/conf"
+
+- name: Copy docker compose files
+  ansible.builtin.copy:
+    src: "compose-files/adguard-home.yaml"
+    dest: "{{ docker_compose_folder }}/adguard-home/docker-compose.yaml"
+    owner: "{{ pi_user }}"
+    group: "{{ pi_group }}"
+    mode: "0644"
+
+- name: Create systemd resolved.conf.d directory
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Configure DNS settings for AdGuard Home
+  ansible.builtin.copy:
+    content: |
+      [Resolve]
+      DNS=127.0.0.1
+      DNSStubListener=no
+    dest: /etc/systemd/resolved.conf.d/adguardhome.conf
+    mode: "0644"
+  become: true
+
+- name: Backup existing resolv.conf
+  ansible.builtin.copy:
+    src: /etc/resolv.conf
+    dest: /etc/resolv.conf.backup
+    remote_src: true
+  become: true
+
+- name: Create new resolv.conf symlink
+  ansible.builtin.file:
+    src: /etc/systemd/resolved.conf.d/adguardhome.conf
+    dest: /etc/resolv.conf
+    state: link
+    force: true
+  become: true
+
+- name: Restart systemd-resolved
+  ansible.builtin.systemd:
+    name: systemd-resolved
+    state: restarted
+  become: true
+
+- name: Allow unprivileged ports starting from 53
+  ansible.builtin.sysctl:
+    name: net.ipv4.ip_unprivileged_port_start
+    value: "53"
+    state: present
+    sysctl_set: yes
+    reload: yes
+  become: true
