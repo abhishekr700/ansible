@@ -23,3 +23,6 @@
 
     - name: Setup Atlas crons
       ansible.builtin.include_tasks: setup-atlas-crons.yaml
+
+    - name: Setup Atlas firewall
+      ansible.builtin.include_tasks: setup-atlas-firewall.yaml

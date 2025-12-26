@@ -1,0 +1,41 @@
+- name: Install ufw on Debian/Ubuntu
+  become: true
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: true
+  when: ansible_facts["pkg_mgr"] == "apt"
+
+- name: Install ufw on RHEL/CentOS (if available)
+  ansible.builtin.yum:
+    name: ufw
+    state: present
+  when: ansible_facts["pkg_mgr"] in ["yum", "dnf"]
+- name: Allow SSH through UFW
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: 22
+    proto: tcp
+- name: Allow HTTP through UFW
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: 80
+    proto: tcp
+- name: Allow HTTPS through UFW
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: 443
+    proto: tcp
+- name: Enable UFW (force)
+  become: true
+  community.general.ufw:
+    state: enabled
+    logging: true
+- name: Enable UFW (force)
+  become: true
+  community.general.ufw:
+    state: reloaded
+    logging: true
