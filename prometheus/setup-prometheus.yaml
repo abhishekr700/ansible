@@ -33,6 +33,8 @@
       include_tasks: ../tasks/debian-ubuntu-common/zsh-config.yaml
     - name: ZFS configurations
       include_tasks: zfs-config.yaml
+    - name: Setup Docker Networks
+      include_tasks: setup-docker-networks.yaml
     - name: Setup crons
       include_tasks: setup-crons.yaml
     - name: Installing Special Purpose Utilities
@@ -42,8 +44,7 @@
           - aria2
     - name: Setup karakeep
       include_tasks: setup-karakeep.yaml
-# - name: Install NodeJS with it's playbook
-#   ansible.builtin.import_playbook: setup/setupNasNodejs.yaml
-
-# - name: Setup projects
-#   ansible.builtin.import_playbook: setup-projects-on-prometheus.yaml
+- name: Start docker containers from compose files
+  import_playbook: start-docker-containers.yaml
+- name: Setup projects
+  ansible.builtin.import_playbook: setup-projects-on-prometheus.yaml

@@ -1,6 +1,8 @@
 ---
 - name: Setup Splitwise Expense Importer
   hosts: nas
+  roles:
+    - nodejs-setup
   vars:
     project_location_nas: "{{nas_projects_folder}}/splitwiseExpenseImporter"
   tasks:
