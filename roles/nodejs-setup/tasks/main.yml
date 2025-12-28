@@ -1,0 +1,18 @@
+---
+- name: "Add nodejs apt key"
+  become: true
+  apt_key:
+    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    state: present
+- name: "Add nodejs 20.x ppa for apt repo"
+  become: true
+  apt_repository:
+    repo: deb https://deb.nodesource.com/node_20.x nodistro main
+    update_cache: true
+    filename: nodesource
+- name: Install using apt
+  become: true
+  ansible.builtin.apt:
+    update_cache: false
+    pkg:
+      - nodejs
