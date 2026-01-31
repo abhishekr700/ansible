@@ -1,0 +1,12 @@
+---
+- name: Setup expense tracker on hermes
+  hosts: hermes
+  vars:
+    pi_user: abhi
+    pi_group: abhi
+    projects_location: /home/abhi/projects
+    vm_project_folder: "{{ projects_location }}"
+    expense_category_predictor_dest: "{{ vm_project_folder }}/expense-tracker"
+  tasks:
+    - name: Include expense tracker setup tasks
+      ansible.builtin.include_tasks: ../projects/tasks/setup-expense-tracker.yaml

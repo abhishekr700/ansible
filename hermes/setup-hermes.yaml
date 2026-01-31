@@ -9,10 +9,16 @@
 
     docker_compose_folder: /home/abhi/compose-files
     docker_volumes_folder: /home/abhi/docker-volumes
-  roles:
-    - roles/debian-install-docker
-    - nodejs-setup
+  # roles:
+  # - roles/debian-install-docker
+  # - nodejs-setup
   tasks:
+    - name: Install Loki Docker Driver
+      community.docker.docker_plugin:
+        plugin_name: grafana/loki-docker-driver:3.6.4-arm64
+        alias: loki
+        state: enable
+
     # - name: Enable IP forwarding for Tailscale
     #   become: true
     #   ansible.posix.sysctl:
@@ -40,16 +46,14 @@
     # - name: Setup Adguard
     #   ansible.builtin.include_tasks: setup-adguard.yaml
 
-    - name: Setup folders
-      ansible.builtin.include_tasks: setup-folders.yaml
-    - name: Setup docker networks
-      ansible.builtin.include_tasks: setup-docker-networks.yaml
+    # - name: Setup folders
+    # ansible.builtin.include_tasks: setup-folders.yaml
+    # - name: Setup docker networks
+    # ansible.builtin.include_tasks: setup-docker-networks.yaml
     # - name: Setup expense importer
     #   vars:
     #     project_location: "{{ projects_location }}/expense-splitwise-bridge"
     #   ansible.builtin.include_tasks: ../projects/tasks/setup-expense-importer.yaml
-    - name: Setup expense tracker
-      vars:
-        vm_project_folder: "{{ projects_location }}"
-        expense_category_predictor_dest: "{{ vm_project_folder }}/expense-tracker"
-      ansible.builtin.include_tasks: ../projects/tasks/setup-expense-tracker.yaml
+    # Expense tracker setup moved to its own playbook
+    - name: Setup Home Assistant
+      ansible.builtin.include_tasks: setup-home-assistant.yaml

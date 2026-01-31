@@ -1,0 +1,3 @@
+---
+- import_playbook: hermes/setup-hermes.yaml
+- import_playbook: hermes/setup-expense-tracker-hermes.yaml
