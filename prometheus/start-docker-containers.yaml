@@ -12,7 +12,6 @@
             name: "CouchDB - Obsidian Sync",
             path: "/zfspool/containers/couchdb",
           }
-        - { name: "Homeassistant", path: "/zfspool/containers/homeassistant" }
         - { name: "Homepage", path: "/zfspool/containers/homepage" }
         - { name: "Immich Stack", path: "/zfspool/containers/immich" }
         - { name: "Portainer", path: "/zfspool/containers/portainer" }

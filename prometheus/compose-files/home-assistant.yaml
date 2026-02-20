@@ -1,0 +1,29 @@
+services:
+  homeassistant:
+    # Note: the hardcoded UID:GID (1000:1001) might need to be updated when deploying to a new system
+    container_name: homeassistant
+    image: "ghcr.io/home-assistant/home-assistant:stable"
+    user: "1000:1001"
+    volumes:
+      - /zfspool/configs/homeassistant:/config
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
+    #privileged: true
+    # network_mode: host
+    ports:
+      - "8123:8123"
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://prometheus.local.abhishekranjan.dev:3100/loki/api/v1/push"
+        # loki-url: "http://loki:3100/loki/api/v1/push"
+        loki-retries: 2
+        loki-batch-size: "102400"
+        # loki-labels: "container_name,container_id,container_image,container_name,container_labels,container_env"
+        mode: non-blocking
+    networks:
+      - loki-network
+
+networks:
+  loki-network:
+    external: true

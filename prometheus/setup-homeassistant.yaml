@@ -1,0 +1,27 @@
+---
+- name: Setup Home Assistant on Prometheus
+  hosts: prometheus
+  vars:
+    homeassistant_dest: "{{ prometheus_compose_dir }}/homeassistant"
+  tasks:
+    - name: Ensure Home Assistant directory exists
+      ansible.builtin.file:
+        path: "{{ homeassistant_dest }}"
+        state: directory
+        owner: "abhi"
+        group: "abhi"
+        mode: "0755"
+
+    - name: Copy docker compose file
+      ansible.builtin.copy:
+        src: "compose-files/home-assistant.yaml"
+        dest: "{{ homeassistant_dest }}/docker-compose.yml"
+        owner: "abhi"
+        group: "abhi"
+        mode: "0644"
+
+    - name: Start Home Assistant container using Docker Compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ homeassistant_dest }}"
+        state: present
+        build: always
