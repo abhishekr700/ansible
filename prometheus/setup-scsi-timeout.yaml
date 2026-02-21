@@ -1,0 +1,25 @@
+- name: Set SCSI timeout udev rule
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/udev/rules.d/99-scsi-timeout.rules
+    content: |
+      # We are doing this to avoid ZFS R/W errors from consumer drives.
+      # Under heavy load, consumer drives might take longer to respond or perform internal maintenance.
+      # Increasing the SCSI timeout prevents the kernel from resetting the link prematurely,
+      # which would otherwise cause ZFS to drop the drive and report errors.
+      # Set SCSI timeout to 180 seconds for all drives
+      ACTION=="add|change", SUBSYSTEM=="block", KERNEL=="sd[a-z]", ATTR{device/timeout}="180"
+    owner: root
+    group: root
+    mode: '0644'
+  register: udev_rule
+
+- name: Reload udev rules
+  become: true
+  ansible.builtin.command: udevadm control --reload-rules
+  when: udev_rule.changed
+
+- name: Trigger udev rules
+  become: true
+  ansible.builtin.command: udevadm trigger
+  when: udev_rule.changed

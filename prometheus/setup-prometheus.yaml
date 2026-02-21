@@ -12,6 +12,12 @@
       include_tasks: ../tasks/debian-ubuntu-common/zsh-config.yaml
     - name: ZFS configurations
       include_tasks: zfs-config.yaml
+    - name: Setup SCSI timeout
+      include_tasks:
+        file: setup-scsi-timeout.yaml
+        apply:
+          tags: scsi
+      tags: scsi
     - name: Setup Docker Networks
       include_tasks: setup-docker-networks.yaml
     - name: Setup crons
