@@ -1,0 +1,11 @@
+---
+- name: Setup expense category predictor on hermes
+  hosts: hermes
+  vars:
+    pi_user: abhi
+    pi_group: abhi
+    projects_location: /home/abhi/projects
+    expense_category_predictor_dest: "{{ projects_location }}/expense-category-predictor"
+  tasks:
+    - name: Include expense category predictor setup tasks
+      ansible.builtin.include_tasks: ../projects/tasks/setup-expense-category-predictor.yaml
