@@ -1,14 +1,10 @@
+# Main setup playbook for the Hermes machine.
+# This orchestrates core system configuration and imports project-specific playbooks.
 ---
 - name: Setup hermes
   hosts: hermes
-  vars:
-    pi_user: abhi
-    pi_group: abhi
-
-    projects_location: /home/abhi/projects
-
-    docker_compose_folder: /home/abhi/compose-files
-    docker_volumes_folder: /home/abhi/docker-volumes
+  vars_files:
+    - vars.yaml
   # roles:
   # - roles/debian-install-docker
   # - nodejs-setup
@@ -50,10 +46,10 @@
     # ansible.builtin.include_tasks: setup-folders.yaml
     # - name: Setup docker networks
     # ansible.builtin.include_tasks: setup-docker-networks.yaml
-    # - name: Setup expense importer
-    #   vars:
-    #     project_location: "{{ projects_location }}/expense-splitwise-bridge"
-    #   ansible.builtin.include_tasks: ../projects/tasks/setup-expense-importer.yaml
+
     # Expense tracker setup moved to its own playbook
     - name: Setup Home Assistant
       ansible.builtin.include_tasks: setup-home-assistant.yaml
+
+- name: Import Expense Importer Playbook
+  import_playbook: setup-expense-importer-hermes.yaml

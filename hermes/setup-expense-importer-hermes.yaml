@@ -1,0 +1,14 @@
+# Standalone playbook for setting up the Splitwise Expense Importer on Hermes.
+# Can be run independently: ansible-playbook hermes/setup-expense-importer-hermes.yaml
+---
+- name: Setup Splitwise Expense Importer on hermes
+  hosts: hermes
+  vars_files:
+    - vars.yaml
+  tasks:
+    - name: Setup expense importer
+      vars:
+        project_location: "{{ expense_importer_project_location }}"
+        env_file_name: "{{ expense_importer_env_file_name }}"
+        use_docker: "{{ expense_importer_use_docker | default(false) }}"
+      ansible.builtin.include_tasks: ../projects/tasks/setup-expense-importer.yaml

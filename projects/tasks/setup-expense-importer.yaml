@@ -1,3 +1,5 @@
+# Shared task definition for the Splitwise Expense Importer project.
+# Supports both host-based (cron) and container-based (Docker) deployments.
 - name: Clone repo
   ansible.builtin.git:
     repo: git@github.com:abhishekr700/expense-splitwise-bridge.git
@@ -7,9 +9,10 @@
   community.general.npm:
     path: "{{ project_location }}"
     ci: true
+  when: not (use_docker | default(false))
 - name: Copy the .env file
   ansible.builtin.copy:
-    src: "{{ local_env_folder }}/expenseImporter.env"
+    src: "{{ local_env_folder }}/{{ env_file_name | default('expenseImporter.env') }}"
     dest: "{{ project_location }}/.env"
     mode: "0644"
 - name: Setup cron
@@ -17,3 +20,10 @@
     name: Splitwise Expense Importer Job
     minute: "0" # Run every hour
     job: "cd '{{ project_location }}' && node import.js >> logs/$(date +\\%Y-\\%m-\\%d-T\\%H\\%M\\%S).log 2>&1"
+    state: "{{ 'absent' if (use_docker | default(false)) else 'present' }}"
+- name: Deploy Docker container
+  community.docker.docker_compose_v2:
+    project_src: "{{ project_location }}"
+    state: present
+  become: true
+  when: (use_docker | default(false))

@@ -1,0 +1,18 @@
+# Centralized variables for the Hermes machine.
+# This file contains host-specific paths, users, and project configurations.
+---
+pi_user: abhi
+pi_group: abhi
+
+projects_location: /home/abhi/projects
+docker_compose_folder: /home/abhi/compose-files
+docker_volumes_folder: /home/abhi/docker-volumes
+
+# Expense Importer specific variables
+expense_importer_project_location: "{{ projects_location }}/expense-splitwise-bridge"
+expense_importer_env_file_name: "expenseImporter-hermes.env"
+expense_importer_use_docker: true
+
+# Other projects
+expense_category_predictor_dest: "{{ projects_location }}/expense-category-predictor"
+expense_tracker_dest: "{{ projects_location }}/expense-tracker"
