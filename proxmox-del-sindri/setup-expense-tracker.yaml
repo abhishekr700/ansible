@@ -1,0 +1,6 @@
+---
+- name: Setup expense tracker
+  hosts: sindri
+  tasks:
+    - name: Include expense tracker setup tasks
+      ansible.builtin.include_tasks: ../projects/tasks/setup-expense-tracker.yaml

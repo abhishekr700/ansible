@@ -1,0 +1,4 @@
+---
+projects_location: /root/projects
+vm_project_folder: "{{ projects_location }}"
+expense_tracker_dest: "{{ vm_project_folder }}/expense-tracker"
