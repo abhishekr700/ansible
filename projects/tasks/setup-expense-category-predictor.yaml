@@ -2,6 +2,7 @@
   ansible.builtin.git:
     repo: git@github.com:abhishekr700/expense-category-predictor.git
     dest: "{{ expense_category_predictor_dest }}"
+    accept_hostkey: true
 - name: Copy the .env file
   ansible.builtin.copy:
     src: "{{ local_env_folder }}/expenseTracker.env"

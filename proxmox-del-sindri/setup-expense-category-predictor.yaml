@@ -1,0 +1,6 @@
+---
+- name: Setup expense category predictor
+  hosts: sindri
+  tasks:
+    - name: Include expense category predictor setup tasks
+      ansible.builtin.include_tasks: ../projects/tasks/setup-expense-category-predictor.yaml
