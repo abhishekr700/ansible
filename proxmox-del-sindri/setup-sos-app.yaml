@@ -1,0 +1,8 @@
+---
+- name: Setup SOS App
+  hosts: sindri
+  tasks:
+    - name: Include SOS App setup tasks
+      ansible.builtin.include_tasks: ../projects/tasks/setup-sos-app.yaml
+      vars:
+        project_location: "{{ sos_app_dest }}"

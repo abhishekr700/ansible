@@ -6,3 +6,4 @@ expense_category_predictor_dest: "{{ vm_project_folder }}/expense-category-predi
 expense_importer_dest: "{{ vm_project_folder }}/expense-splitwise-bridge"
 expense_importer_env_file_name: "expenseImporter.env"
 expense_importer_use_docker: true
+sos_app_dest: "{{ vm_project_folder }}/sos-app"

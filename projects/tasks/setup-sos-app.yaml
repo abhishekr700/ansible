@@ -1,0 +1,24 @@
+---
+- name: Clone repo
+  ansible.builtin.git:
+    repo: git@github.com:abhishekr700/sos-app.git
+    dest: "{{ project_location }}"
+    accept_newhostkey: true
+
+- name: Copy the .env file
+  ansible.builtin.copy:
+    src: "{{ local_env_folder }}/sosApp.env"
+    dest: "{{ project_location }}/.env"
+    mode: "0644"
+
+- name: Copy the data file
+  ansible.builtin.copy:
+    src: "{{ local_env_folder }}/sosAppData.txt"
+    dest: "{{ project_location }}/data.txt"
+    mode: "0644"
+
+- name: Start service using docker-compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ project_location }}"
+    build: always
+    state: present
