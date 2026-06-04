@@ -1,0 +1,26 @@
+---
+- name: Teardown and stop removed projects on prometheus
+  hosts: nas
+  tasks:
+    - name: Stop and remove Expense Tracker containers
+      community.docker.docker_compose_v2:
+        project_src: "{{ vm_project_folder }}/expenseTracker"
+        state: absent
+      ignore_errors: true
+
+    - name: Stop and remove Expense Category Predictor containers
+      community.docker.docker_compose_v2:
+        project_src: "{{ nas_projects_folder }}/expenseCategoryPredictor"
+        state: absent
+      ignore_errors: true
+
+    - name: Stop and remove SOS App containers
+      community.docker.docker_compose_v2:
+        project_src: "{{ nas_projects_folder }}/sos-app"
+        state: absent
+      ignore_errors: true
+
+    - name: Remove Splitwise Expense Importer Cron Job
+      ansible.builtin.cron:
+        name: Splitwise Expense Importer Job
+        state: absent
