@@ -1,0 +1,10 @@
+---
+- name: Setup Splitwise Expense Importer
+  hosts: sindri
+  tasks:
+    - name: Setup expense importer
+      vars:
+        project_location: "{{ expense_importer_dest }}"
+        env_file_name: "{{ expense_importer_env_file_name }}"
+        use_docker: "{{ expense_importer_use_docker | default(false) }}"
+      ansible.builtin.include_tasks: ../projects/tasks/setup-expense-importer.yaml

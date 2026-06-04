@@ -22,3 +22,6 @@
 
 - name: Import Expense Category Predictor Playbook
   import_playbook: setup-expense-category-predictor.yaml
+
+- name: Import Splitwise Expense Importer Playbook
+  import_playbook: setup-expense-importer.yaml

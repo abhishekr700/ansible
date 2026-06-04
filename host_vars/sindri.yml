@@ -3,3 +3,6 @@ projects_location: /root/projects
 vm_project_folder: "{{ projects_location }}"
 expense_tracker_dest: "{{ vm_project_folder }}/expense-tracker"
 expense_category_predictor_dest: "{{ vm_project_folder }}/expense-category-predictor"
+expense_importer_dest: "{{ vm_project_folder }}/expense-splitwise-bridge"
+expense_importer_env_file_name: "expenseImporter.env"
+expense_importer_use_docker: true
