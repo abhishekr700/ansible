@@ -2,41 +2,87 @@
 # Latest instructions at https://docs.docker.com/engine/install/debian/#install-using-the-repository
 # if playbook doesn't work, consult above
 
-- name: Install linux utilities
-  become: true
-  ansible.builtin.apt:
-    pkg:
-      - gnupg
+# - name: Install linux utilities
+#   become: true
+#   ansible.builtin.apt:
+#     pkg:
+#       - gnupg
 
 - name: Set OS type variable (Debian/Ubuntu)
   set_fact:
     os_type: "{{ ansible_facts['distribution'] | lower }}"
 
-- name: "Add docker GPG apt key"
+- name: Find apt sources that reference download.docker.com
+  ansible.builtin.shell: |
+    grep -Hn "download.docker.com" /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
+  register: docker_repo_grep
+  changed_when: false
+  failed_when: false
+
+- name: Try to extract signed-by path from existing docker apt sources (safe, minimal)
+  ansible.builtin.shell: |
+    grep -Hn "download.docker.com" /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null \
+      | sed -n 's/.*signed-by=\([^]\s]*\).*/\1/p' \
+      | head -n1 || true
+  register: docker_signed_by_raw
+  changed_when: false
+  failed_when: false
+
+- name: Set docker_signed_by (use extracted path or default)
+  ansible.builtin.set_fact:
+    docker_signed_by: "{{ docker_signed_by_raw.stdout | default('/usr/share/keyrings/docker.gpg') }}"
+
+- name: Debug - which signed-by path we'll use
+  ansible.builtin.debug:
+    msg: "Using docker signed-by path: {{ docker_signed_by }}"
+
+- name: Ensure /etc/apt/keyrings directory exists
   become: true
-  apt_key:
-    url: "https://download.docker.com/linux/{{ os_type }}/gpg"
-    state: present
-  register: gpg_result
-  retries: 3
-  delay: 5
-  until: gpg_result is success
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download Docker GPG key to /etc/apt/keyrings/docker.asc
+  become: true
+  get_url:
+    url: "https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}/gpg"
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+    force: yes
+
+# - name: "Add docker GPG apt key"
+#   become: true
+#   apt_key:
+#     url: "https://download.docker.com/linux/{{ os_type }}/gpg"
+#     state: present
+#   register: gpg_result
+#   retries: 3
+#   delay: 5
+#   until: gpg_result is success
 
 - name: Get system architecture
   command: dpkg --print-architecture
   register: architecture_output
   changed_when: false
 
-- name: Add Docker Repository
+# - name: Add Docker Repository
+#   become: true
+#   apt_repository:
+#     repo: "deb [arch={{ architecture_output.stdout }}] https://download.docker.com/linux/{{ os_type }} {{ ansible_distribution_release }} stable"
+#     state: present
+#     update_cache: true
+#   register: repo_result
+#   retries: 3
+#   delay: 5
+#   until: repo_result is success
+
+- name: Add Docker APT repository with signed-by option
   become: true
   apt_repository:
-    repo: "deb [arch={{ architecture_output.stdout }}] https://download.docker.com/linux/{{ os_type }} {{ ansible_distribution_release }} stable"
+    repo: "deb [arch={{ architecture_output.stdout }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ os_type }} {{ ansible_facts['distribution_release'] }} stable"
     state: present
     update_cache: true
-  register: repo_result
-  retries: 3
-  delay: 5
-  until: repo_result is success
 
 - name: Install Docker
   become: true
