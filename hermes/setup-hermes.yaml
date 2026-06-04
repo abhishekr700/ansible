@@ -48,8 +48,12 @@
     # ansible.builtin.include_tasks: setup-docker-networks.yaml
 
     # Expense tracker setup moved to its own playbook
-    - name: Setup Home Assistant
-      ansible.builtin.include_tasks: setup-home-assistant.yaml
+
+- name: Import Home Assistant Playbook
+  import_playbook: setup-home-assistant.yaml
 
 - name: Import Expense Importer Playbook
   import_playbook: setup-expense-importer-hermes.yaml
+
+- name: Import Email Filter Playbook
+  import_playbook: setup-email-filter-hermes.yaml

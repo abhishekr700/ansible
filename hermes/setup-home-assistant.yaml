@@ -1,0 +1,31 @@
+# Standalone playbook for setting up Home Assistant on Hermes.
+# Can be run independently: ansible-playbook hermes/setup-home-assistant.yaml
+---
+- name: Setup Home Assistant on hermes
+  hosts: hermes
+  vars_files:
+    - vars.yaml
+  tasks:
+    - name: Create folders for Home Assistant
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ pi_user }}"
+        group: "{{ pi_group }}"
+        mode: "0755"
+      loop:
+        - "{{ docker_compose_folder }}/homeassistant"
+        - "{{ docker_volumes_folder }}/homeassistant"
+
+    - name: Copy docker compose files
+      ansible.builtin.copy:
+        src: "compose-files/home-assistant.yaml"
+        dest: "{{ docker_compose_folder }}/homeassistant/docker-compose.yaml"
+        owner: "{{ pi_user }}"
+        group: "{{ pi_group }}"
+        mode: "0644"
+
+    - name: Deploy Home Assistant container using Docker Compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ docker_compose_folder }}/homeassistant"
+        state: present

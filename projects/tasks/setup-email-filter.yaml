@@ -1,0 +1,38 @@
+# Shared task definition for the Email Filter Script project.
+# Supports both host-based (cron) and container-based (Docker) deployments.
+- name: Clone repo
+  ansible.builtin.git:
+    repo: git@github.com:abhishekr700/email-filter-script.git
+    dest: "{{ project_location }}"
+    accept_newhostkey: true
+
+- name: Copy the .env file
+  ansible.builtin.copy:
+    src: "{{ local_env_folder }}/{{ env_file_name | default('emailFilter.env') }}"
+    dest: "{{ project_location }}/.env"
+    mode: "0644"
+
+# - name: Copy the .env file 2
+#   ansible.builtin.copy:
+#     src: "{{ local_env_folder }}/credentials-email-filter-script2.json"
+#     dest: "{{ project_location }}/creds/credentials2.json"
+
+- name: Install npm dependencies
+  community.general.npm:
+    path: "{{ project_location }}"
+    ci: true
+  when: not (use_docker | default(false))
+
+- name: Setup cron
+  ansible.builtin.cron:
+    name: Email Filter Job
+    minute: "0" # Run every hour
+    job: "cd '{{ project_location }}' && node index.js >> logs/$(date +\\%Y-\\%m-\\%d-T\\%H\\%M\\%S).log 2>&1"
+    state: "{{ 'absent' if (use_docker | default(false)) else 'present' }}"
+
+- name: Start service using docker-compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ project_location }}"
+    build: always
+    state: present
+  when: (use_docker | default(false))

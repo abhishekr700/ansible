@@ -1,0 +1,14 @@
+# Standalone playbook for setting up the Email Filter Script on Hermes.
+# Can be run independently: ansible-playbook hermes/setup-email-filter-hermes.yaml
+---
+- name: Setup Email Filter Script on hermes
+  hosts: hermes
+  vars_files:
+    - vars.yaml
+  tasks:
+    - name: Setup email filter
+      vars:
+        project_location: "{{ email_filter_project_location }}"
+        env_file_name: "{{ email_filter_env_file_name }}"
+        use_docker: "{{ email_filter_use_docker | default(false) }}"
+      ansible.builtin.include_tasks: ../projects/tasks/setup-email-filter.yaml
