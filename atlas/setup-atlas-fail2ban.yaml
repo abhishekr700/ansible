@@ -1,0 +1,36 @@
+---
+- name: Setup Fail2ban on Atlas
+  hosts: atlas
+  gather_facts: true
+  tasks:
+    - name: Install fail2ban package
+      become: true
+      ansible.builtin.apt:
+        name: fail2ban
+        state: present
+        update_cache: true
+
+    - name: Configure jail.local
+      become: true
+      ansible.builtin.template:
+        src: templates/jail.local.j2
+        dest: /etc/fail2ban/jail.local
+        owner: root
+        group: root
+        mode: '0644'
+      register: fail2ban_config
+
+    - name: Ensure fail2ban service is running and enabled
+      become: true
+      ansible.builtin.service:
+        name: fail2ban
+        state: started
+        enabled: true
+      when: not ansible_check_mode
+
+    - name: Restart fail2ban service if configuration changed
+      become: true
+      ansible.builtin.service:
+        name: fail2ban
+        state: restarted
+      when: fail2ban_config.changed and not ansible_check_mode

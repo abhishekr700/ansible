@@ -1,0 +1,19 @@
+---
+atlas_project_folder: "/home/ubuntu/projects"
+
+atlas_crons_folder: "/opt/crons"
+atlas_cron_logs_dir: "/var/log/crons"
+
+atlas_backup_cron: "atlas_backup.sh"
+atlas_backup_cron_log_dir: "atlas-backup-cron"
+
+atlas_backup_sync_onedrive_cron: "atlas_backup_sync_onedrive.sh"
+atlas_backup_sync_onedrive_cron_log_dir: "atlas-backup-sync-onedrive-cron"
+
+# Fail2ban configuration parameters
+fail2ban_bantime: "1h"
+fail2ban_findtime: "10m"
+fail2ban_maxretry: 5
+fail2ban_banaction: "iptables-multiport"
+fail2ban_banaction_allports: "iptables-multiport"
+fail2ban_ignoreip: "127.0.0.1/8 ::1 100.64.0.0/10 192.168.0.0/16"
