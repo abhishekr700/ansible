@@ -7,8 +7,8 @@ atlas_cron_logs_dir: "/var/log/crons"
 atlas_backup_cron: "atlas_backup.sh"
 atlas_backup_cron_log_dir: "atlas-backup-cron"
 
-atlas_backup_sync_onedrive_cron: "atlas_backup_sync_onedrive.sh"
-atlas_backup_sync_onedrive_cron_log_dir: "atlas-backup-sync-onedrive-cron"
+atlas_backup_sync_to_cloud_cron: "atlas_backup_sync_to_cloud.sh"
+atlas_backup_sync_to_cloud_cron_log_dir: "atlas-backup-sync-to-cloud-cron"
 
 # Fail2ban configuration parameters
 fail2ban_bantime: "1h"

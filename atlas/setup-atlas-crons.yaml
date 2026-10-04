@@ -11,7 +11,8 @@
     - "{{ atlas_crons_folder }}"
     - "{{ atlas_cron_logs_dir }}"
     - "{{ atlas_cron_logs_dir }}/{{ atlas_backup_cron_log_dir }}"
-    - "{{ atlas_cron_logs_dir }}/{{ atlas_backup_sync_onedrive_cron_log_dir }}"
+    - "{{ atlas_cron_logs_dir }}/{{ atlas_backup_sync_to_cloud_cron_log_dir }}"
+
 - name: Copy cron files
   ansible.builtin.copy:
     src: "{{ local_crons_folder }}/{{ item.script }}"
@@ -21,9 +22,10 @@
   loop:
     - { name: "Atlas backup cron", script: "{{ atlas_backup_cron }}" }
     - {
-        name: "Atlas backup sync onedrive cron",
-        script: "{{ atlas_backup_sync_onedrive_cron }}",
+        name: "Atlas backup sync to cloud cron",
+        script: "{{ atlas_backup_sync_to_cloud_cron }}",
       }
+
 - name: Add cron job to crontab
   become: true
   ansible.builtin.cron:
@@ -43,8 +45,21 @@
         log_dir: "{{ atlas_backup_cron_log_dir }}",
       }
     - {
-        name: "Atlas backup sync onedrive cron",
+        name: "Atlas backup sync to cloud cron",
         minute: "15",
-        script: "{{ atlas_backup_sync_onedrive_cron }}",
-        log_dir: "{{ atlas_backup_sync_onedrive_cron_log_dir }}",
+        script: "{{ atlas_backup_sync_to_cloud_cron }}",
+        log_dir: "{{ atlas_backup_sync_to_cloud_cron_log_dir }}",
       }
+
+- name: Remove old OneDrive sync cron job
+  become: true
+  ansible.builtin.cron:
+    name: "Atlas backup sync onedrive cron"
+    user: root
+    state: absent
+
+- name: Remove old OneDrive sync script file
+  become: true
+  ansible.builtin.file:
+    path: "{{ atlas_crons_folder }}/atlas_backup_sync_onedrive.sh"
+    state: absent
