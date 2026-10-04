@@ -1,0 +1,40 @@
+---
+- name: Setup Caddy on Atlas
+  hosts: atlas
+  vars:
+    caddy_dest: "/home/ubuntu/containers/caddy"
+  tasks:
+    - name: Ensure Caddy container directory exists
+      ansible.builtin.file:
+        path: "{{ caddy_dest }}"
+        state: directory
+        owner: "ubuntu"
+        group: "ubuntu"
+        mode: "0755"
+
+    - name: Copy Caddy deployment files
+      ansible.builtin.copy:
+        src: "files/caddy/{{ item }}"
+        dest: "{{ caddy_dest }}/{{ item }}"
+        owner: "ubuntu"
+        group: "ubuntu"
+        mode: "0644"
+      loop:
+        - Caddyfile
+        - Dockerfile
+        - compose.yaml
+
+    - name: Copy Caddy .env file
+      ansible.builtin.copy:
+        src: "{{ local_env_folder }}/atlas-caddy.env"
+        dest: "{{ caddy_dest }}/.env"
+        owner: "ubuntu"
+        group: "ubuntu"
+        mode: "0640"
+
+
+    - name: Start Caddy using docker compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ caddy_dest }}"
+        build: always
+        state: present

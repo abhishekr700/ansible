@@ -1,0 +1,40 @@
+# Global configuration block (applies to all sites)
+{
+    # Use the Cloudflare DNS challenge for certificate issuance
+    # This is required because your destinations are private IPs.
+    acme_dns cloudflare "{$CLOUDFLARE_API_TOKEN}"
+
+    #servers {
+    #   trusted_proxies static cloudflare
+    #}
+
+    debug
+}
+
+expensetracker.abhishekranjan.dev {
+	reverse_proxy hermes:3000 sindri:3000 {
+			health_uri /
+			# Add a response header indicating the backend that served the request
+	        header_down X-Backend-Server {upstream_hostport}
+		}
+}
+
+sos.abhishekranjan.dev {
+	reverse_proxy hermes:3007 prometheus:3007 {
+		health_uri /
+		# Add a response header indicating the backend that served the request
+        header_down X-Backend-Server {upstream_hostport}
+	}
+	
+	log {
+	        output stdout # or to a file path like file /var/log/caddy/access.log
+	    }
+}
+
+emailfilter.abhishekranjan.dev {
+	reverse_proxy hermes:3005 prometheus:3005 {
+		health_uri /
+		# Add a response header indicating the backend that served the request
+        header_down X-Backend-Server {upstream_hostport}
+	}
+}

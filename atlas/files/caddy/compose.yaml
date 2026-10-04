@@ -1,0 +1,26 @@
+services:
+  caddy:
+    # Build the image from the Dockerfile in the current directory
+    build: .
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # Required for HTTP/3
+    volumes:
+      # Mount the Caddyfile for configuration
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Create named volumes for persistent data and config
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      # Pass the Cloudflare API token from a .env file
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+
+# Define the named volumes
+volumes:
+  caddy_data:
+    external: false # Docker will manage this volume
+  caddy_config:
+    external: false
