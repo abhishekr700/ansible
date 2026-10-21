@@ -1,0 +1,12 @@
+---
+- name: Setup SOS App
+  hosts: hermes
+  vars_files:
+    - vars.yaml
+  vars:
+    project_location_hermes: "{{ projects_location }}/sos-app"
+  tasks:
+    - name: Include SOS App setup tasks
+      ansible.builtin.include_tasks: ../projects/tasks/setup-sos-app.yaml
+      vars:
+        project_location: "{{ project_location_hermes }}"

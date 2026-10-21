@@ -57,3 +57,6 @@
 
 - name: Import Email Filter Playbook
   import_playbook: setup-email-filter-hermes.yaml
+
+- name: Import SOS App Playbook
+  import_playbook: setup-sos-app.yaml
