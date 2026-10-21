@@ -11,4 +11,5 @@
         project_location: "{{ email_filter_project_location }}"
         env_file_name: "{{ email_filter_env_file_name }}"
         use_docker: "{{ email_filter_use_docker | default(false) }}"
+        version: "{{ email_filter_version | default('HEAD') }}"
       ansible.builtin.include_tasks: ../projects/tasks/setup-email-filter.yaml

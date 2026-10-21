@@ -4,6 +4,8 @@
   ansible.builtin.git:
     repo: git@github.com:abhishekr700/email-filter-script.git
     dest: "{{ project_location }}"
+    version: "{{ version | default('HEAD') }}"
+    force: true
     accept_newhostkey: true
 
 - name: Copy the .env file

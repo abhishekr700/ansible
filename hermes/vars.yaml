@@ -21,3 +21,5 @@ expense_tracker_dest: "{{ projects_location }}/expense-tracker"
 email_filter_project_location: "{{ projects_location }}/email-filter-script"
 email_filter_env_file_name: "emailFilter-hermes.env"
 email_filter_use_docker: true
+email_filter_version: "main"
+
