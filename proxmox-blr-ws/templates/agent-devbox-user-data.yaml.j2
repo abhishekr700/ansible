@@ -1,0 +1,22 @@
+#cloud-config
+# Ansible managed (proxmox-blr-ws/setup-proxmox-blr-ws-agent-devbox.yaml).
+# Deliberately minimal: an admin user and the guest agent. agent-devbox/setup-agent-devbox.yaml does the rest.
+users:
+  - name: {{ agent_devbox_admin_user }}
+    groups: [sudo]
+    shell: /bin/bash
+    # Passwordless sudo so Ansible can become root without -K. The hermes user gets no sudo.
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    lock_passwd: true
+    ssh_authorized_keys:
+      - {{ agent_devbox_admin_pubkey }}
+
+disable_root: true
+ssh_pwauth: false
+
+package_update: true
+packages:
+  - qemu-guest-agent
+
+runcmd:
+  - [systemctl, enable, --now, qemu-guest-agent]

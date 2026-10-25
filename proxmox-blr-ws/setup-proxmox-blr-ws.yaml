@@ -8,3 +8,6 @@
 
 - name: Import VM base inputs Playbook
   import_playbook: setup-proxmox-blr-ws-vm-base.yaml
+
+- name: Import agent-devbox cloud-init Playbook
+  import_playbook: setup-proxmox-blr-ws-agent-devbox.yaml

@@ -1,0 +1,18 @@
+---
+# agent-devbox's cloud-init user-data (user + SSH key + qemu-guest-agent, nothing else),
+# attached to VM 120 by terraform/proxmox-blr-ws/agent-devbox.
+# Needs `snippets` on local storage first: setup-proxmox-blr-ws-vm-base.yaml.
+# Doing this from Ansible keeps the Terraform token API-only (no root SSH from Terraform).
+- name: Setup agent-devbox cloud-init on proxmox-blr-ws
+  hosts: proxmox-blr-ws
+  vars:
+    agent_devbox_admin_user: abhi
+    agent_devbox_admin_pubkey: "{{ lookup('ansible.builtin.file', '~/.ssh/id_rsa.pub') }}"
+  tasks:
+    - name: Upload agent-devbox cloud-init user-data
+      ansible.builtin.template:
+        src: templates/agent-devbox-user-data.yaml.j2
+        dest: /var/lib/vz/snippets/agent-devbox-user-data.yaml
+        owner: root
+        group: root
+        mode: "0644"
