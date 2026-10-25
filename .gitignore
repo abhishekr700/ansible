@@ -13,3 +13,5 @@ roles/stefangweichinger.*
 *.tfvars
 !*.tfvars.example
 crash.log
+# Saved plans can contain sensitive values
+tfplan
