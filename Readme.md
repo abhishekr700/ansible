@@ -59,3 +59,9 @@ ansible-playbook -i inventory.yaml prometheus/projects/setup-expense-importer.ya
 ansible-playbook -i inventory.yaml prometheus/projects/setup-sos-app.yaml
 
 ```
+
+## Terraform + agent-devbox
+
+Some infrastructure is created with Terraform (`terraform/`) and then configured with Ansible.
+Start at `agent-devbox/Readme.md`: it has the full picture (layers, credentials, cheat sheet)
+for the Hermes Agent VM on proxmox-blr-ws and the Tailscale policy in `terraform/tailscale/`.
