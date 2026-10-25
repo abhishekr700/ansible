@@ -1,0 +1,266 @@
+// Example/default ACLs for unrestricted connections.
+{
+	// Declare static groups of users. Use autogroups for all users or users with a specific role.
+	// "groups": {
+	//   "group:example": ["alice@example.com", "bob@example.com"],
+	// },
+
+	// Define the tags which can be applied to devices and by which users.
+	// "tagOwners": {
+	//   "tag:example": ["autogroup:admin"],
+	// },
+
+	"hosts": {
+		"abhisheks-macbook-pro":  "100.111.151.12",
+		"abhishek-iphone-14-pro": "100.110.125.22",
+		"prometheus":             "100.88.223.44",
+		"jellyfin":               "100.84.249.96",
+		"vm-1":                   "100.98.133.122",
+		"vm-2":                   "100.112.33.99",
+		"mi-tv":                  "100.116.153.16",
+		"debian-blr":             "100.99.10.128",
+		"zaivio":                 "100.105.162.128", // 100.105.162.128
+		"atlas":                  "100.101.51.88",
+		"bifrost":                "100.79.3.74",
+		"nanokvm":                "100.74.96.8",
+		"odin":                   "100.117.2.29",
+		"hermes":                 "100.71.201.14",
+		"syncthing":              "100.77.97.111",
+		"proxmox-blr-ws":         "100.113.136.34",
+
+		//"example-network-1": "100.100.101.100/24",
+	},
+
+	// Define access control lists for users, groups, autogroups, tags,
+	// Tailscale IP addresses, and subnet ranges.
+	"acls": [
+		// Allow all connections from the user's own (untagged) devices.
+		// Not "*": that would also match tag:agent. Tagged devices are not members.
+		{
+			"action": "accept",
+			"src":    ["autogroup:member"],
+			"dst":    ["*:*"],
+		},
+		// ===
+		// TEMP
+		// ====
+		{
+			"action": "accept",
+			"src":    ["atlas"],
+			"dst":    ["debian-blr:*"],
+		},
+		// iperf connections
+		{
+			"action": "accept",
+			"src":    ["autogroup:member"],
+			"dst":    ["*:5201", "*:22000"],
+		},
+		//
+		//
+		// ============
+		// MACBOOK PRO
+		// ============
+		{
+			"action": "accept",
+			"src":    ["abhisheks-macbook-pro", "abhishek-iphone-14-pro"],
+			"dst":    ["*:*"],
+		},
+		// =============
+		// IPHONE 14 PRO
+		// =============
+		{
+			"action": "accept",
+			"src":    ["abhishek-iphone-14-pro"],
+			"dst":    ["prometheus:*", "zaivio:*", "*:*"],
+		},
+		// =============
+		// PROMETHEUS
+		// =============
+		{
+			"action": "accept",
+			"src":    ["prometheus"],
+			"dst":    ["zaivio:*", "debian-blr:*", "jellyfin:*"],
+		},
+		// =============
+		// DEBIAN-BLR
+		// =============
+		{
+			"action": "accept",
+			"src":    ["debian-blr"],
+			"dst":    ["atlas:*"],
+		},
+		// ===========
+		// UPTIME-KUMA
+		// ===========
+		// Allow tcp to vm-2:3001 from all devices (uptime-kuma)
+		{
+			"action": "accept",
+			"src":    ["autogroup:member"],
+			"dst":    ["vm-2:3001"],
+			"proto":  "tcp",
+		},
+		// Allow vm-2 to ping (icmp) all devices
+		{
+			"action": "accept",
+			"src":    ["vm-2"],
+			"dst":    ["*:*"],
+			"proto":  "icmp",
+		},
+		// vm-2 has uptime-kuma running. Allow it access to services for monitoring.
+		{
+			"action": "accept",
+			"src":    ["vm-2"],
+			"dst":    ["prometheus:80,3000,3001,3005,7878,8080,8989", "jellyfin:8096", "atlas:*"],
+			"proto":  "tcp",
+		},
+		// =======
+		// BIFROST
+		// =======
+		// Allow bifrost to reach atlas,jellyfin,prometheus
+		{
+			"action": "accept",
+			"src":    ["bifrost"],
+			"dst":    ["atlas:*", "jellyfin:*", "prometheus:*"],
+			"proto":  "tcp",
+		},
+		// TODO: Update this
+		// Allow prometheus mariadb backup script to ping vm-2
+		{
+			"action": "accept",
+			"src":    ["prometheus"],
+			"dst":    ["vm-2:*", "prometheus:*", "atlas:*"],
+			"proto":  "tcp",
+		},
+		// Allow p2p torrents
+		{
+			"action": "accept",
+			"src":    ["prometheus"],
+			"dst":    ["vm-1:6881"],
+			"proto":  "tcp",
+		},
+		// mi-tv access jellyfin
+		{
+			"action": "accept",
+			"src":    ["mi-tv"],
+			"dst":    ["jellyfin:8096"],
+			"proto":  "tcp",
+		},
+		// debian-blr access prometheus via syncthing
+		{
+			"action": "accept",
+			"src":    ["debian-blr"],
+			"dst":    ["prometheus:22000", "bifrost:22000"],
+		},
+		{
+			"action": "accept",
+			"src":    ["syncthing"],
+			"dst":    ["prometheus:22000", "bifrost:22000"],
+		},
+		{
+			"action": "accept",
+			"src":    ["vm-2"],
+			"dst":    ["jellyfin:8096"],
+			"proto":  "tcp",
+		},
+		// ============
+		// AGENT-DEVBOX
+		// ============
+		// tag:agent (Hermes Agent VM) may reach only atlas CouchDB (Tailscale Serve on 443).
+		// Inbound: the user's devices already reach it via the member allow-all above.
+		{
+			"action": "accept",
+			"src":    ["tag:agent"],
+			"dst":    ["atlas:443"],
+			"proto":  "tcp",
+		},
+		// Temporary SSH from the agent to specific hosts. Uncomment, list hosts, apply.
+		// Revoke by commenting out again and applying.
+		// {
+		// 	"action": "accept",
+		// 	"src":    ["tag:agent"],
+		// 	"dst":    ["<host>:22"],
+		// 	"proto":  "tcp",
+		// },
+
+		// Allow users in "group:example" to access "tag:example", but only from
+		// devices that are running macOS and have enabled Tailscale client auto-updating.
+		// {"action": "accept", "src": ["group:example"], "dst": ["tag:example:*"], "srcPosture":["posture:autoUpdateMac"]},
+	],
+
+	// "randomizeClientPort": true,
+
+	// Define postures that will be applied to all rules without any specific
+	// srcPosture definition.
+	// "defaultSrcPosture": [
+	//      "posture:anyMac",
+	// ],
+
+	// Define device posture rules requiring devices to meet
+	// certain criteria to access parts of your system.
+	// "postures": {
+	//      // Require devices running macOS, a stable Tailscale
+	//      // version and auto update enabled for Tailscale.
+	//  "posture:autoUpdateMac": [
+	//      "node:os == 'macos'",
+	//      "node:tsReleaseTrack == 'stable'",
+	//      "node:tsAutoUpdate",
+	//  ],
+	//      // Require devices running macOS and a stable
+	//      // Tailscale version.
+	//  "posture:anyMac": [
+	//      "node:os == 'macos'",
+	//      "node:tsReleaseTrack == 'stable'",
+	//  ],
+	// },
+
+	// Define users and devices that can use Tailscale SSH.
+	"ssh": [
+		// Allow all users to SSH into their own devices in check mode.
+		// Comment this section out if you want to define specific restrictions.
+		{
+			"action": "check",
+			"src":    ["autogroup:member"],
+			"dst":    ["autogroup:self"],
+			"users":  ["autogroup:nonroot", "root"],
+		},
+	],
+
+	"nodeAttrs": [
+		{
+			// Funnel policy, which lets tailnet members control Funnel
+			// for their own devices.
+			// Learn more at https://tailscale.com/kb/1223/tailscale-funnel/
+			"target": ["autogroup:member"],
+
+			"attr": ["funnel"],
+		},
+	],
+
+	"derpMap":   {},
+	"tagOwners": {"tag:agent": ["autogroup:admin"]},
+
+	// Test access rules every time they're saved. A failing test rejects the policy.
+	"tests": [
+		{
+			"src":    "tag:agent",
+			"proto":  "tcp",
+			"accept": ["atlas:443"],
+			"deny": [
+				"atlas:22",
+				"proxmox-blr-ws:22",
+				"proxmox-blr-ws:8006",
+				"prometheus:22",
+				"prometheus:80",
+				"bifrost:22",
+				"hermes:22",
+				"vm-2:3001",
+				"192.168.1.1:22", // subnet routes
+			],
+		},
+		{
+			"src":    "abhisheks-macbook-pro",
+			"proto":  "tcp",
+			"accept": ["tag:agent:22", "proxmox-blr-ws:8006", "prometheus:22"],
+		},
+	],
+}

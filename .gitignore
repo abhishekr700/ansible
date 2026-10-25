@@ -5,3 +5,11 @@
 **test_key.pub
 kolfi/*
 roles/stefangweichinger.*
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
