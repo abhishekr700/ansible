@@ -1,7 +1,7 @@
 # agent-devbox
 
-A disposable VM (VMID 120) on `proxmox-blr-ws` that runs Hermes Agent. The agent has full control
-inside the VM, but no standing access to storage or other hosts.
+A disposable VM (VMID 120) on `proxmox-blr-ws` that runs Hermes Agent and Claude Code. The agents have
+full control inside the VM, but no standing access to storage or other hosts.
 
 ## The big picture (read this first)
 
@@ -38,7 +38,7 @@ Four layers, each built on the one before. **Terraform creates things; Ansible c
                      ▼
  ┌─ 4. Inside the VM ────── Ansible → agent-devbox ─────────────────────────────────┐
  │  agent-devbox/setup-agent-devbox.yaml                                            │
- │  base hardening → Tailscale join → hermes user → Docker → Hermes → ufw (last)    │
+ │  base hardening → Tailscale → hermes user → Docker → Hermes → Claude → ufw (last)│
  └──────────────────────────────────────────────────────────────────────────────────┘
 
  Side layer: Tailscale  ── Terraform → Tailscale API ── terraform/tailscale/
@@ -56,14 +56,25 @@ Four layers, each built on the one before. **Terraform creates things; Ansible c
 | Ansible → VM | your SSH key as `abhi` (passwordless sudo) | `~/.ssh` | the VM |
 | Hermes in the VM | none for other hosts | — | inside the VM only |
 
-Terraform's env vars only load in an interactive shell, so when Claude runs it: `zsh -ic 'terraform ...'`.
+### Users on the VM
+
+| User | Purpose | Privileges | How you get there |
+|---|---|---|---|
+| `abhi` | your admin login; Ansible connects as it | passwordless sudo | `ssh abhi@agent-devbox` |
+| `hermes` | runs Hermes Agent (`~/.hermes`, user service `hermes-gateway`) and Claude Code (`~/.claude`) | **no sudo**; `docker` group (root-equivalent inside the VM only) | `sudo -iu hermes` from `abhi` |
+
+The `hermes` and `claude` commands exist only for the `hermes` user (`~hermes/.local/bin`). As `abhi`, you get
+`command not found`. Switch with `sudo -iu hermes`; the `-i` sets up its PATH.
+
+Terraform's env vars only load in an interactive shell, so an agent on your Mac runs it as `zsh -ic 'terraform ...'`.
 You run `terraform apply` yourself (Claude's auto mode blocks it).
 
 ### Where the state lives (don't lose these)
 
 - `terraform/*/terraform.tfstate`: local only, gitignored. Losing it doesn't break the VM,
   but Terraform forgets it owns it (recover with `terraform import`).
-- `~hermes/.hermes` inside the VM: Hermes config, memory and sessions. Only backups protect it (`docs/backup.md`).
+- `~hermes/.hermes` and `~hermes/.claude` inside the VM: Hermes config, memory and sessions, and the Claude
+  login and history. Only backups protect them (`docs/backup.md`).
 
 ### "I want to…" cheat sheet
 
@@ -87,6 +98,7 @@ You run `terraform apply` yourself (Claude's auto mode blocks it).
   - **open:** atlas:443, internet, DNS to the router.
 - Found and fixed on the way: the cloud image has no gpg (added `gnupg`); `hermes gateway install`
   prompts on the tty (now non-interactive flags); the LAN also runs IPv6 (added v6 blocks).
+- 2026-10-26: Claude Code (2.1.310) installed for `hermes`; the second run gave `changed=0`.
 
 Isolation, as built:
 - **Tailscale policy:** `tag:agent` → `atlas:443` only. This is the real boundary.
@@ -149,9 +161,14 @@ Then set `hermes_gateway_enabled: true` in `host_vars/agent-devbox.yml` and run
 `ansible-playbook -i inventory.yaml agent-devbox/setup-agent-devbox.yaml --tags hermes`.
 Logs: `sudo -iu hermes journalctl --user -u hermes-gateway -f`.
 
+### Sign in Claude Code (manual, once)
+
+As `hermes`, run `claude`, then `/login` with your account. There's no API key on the box, and nothing goes in the repo.
+After a rebuild, sign in again.
+
 ## Rebuild
 
-Throws away everything in the VM, including `~hermes/.hermes`. Take a backup first if you want it (`docs/backup.md`).
+Throws away everything in the VM, including `~hermes/.hermes` and the Claude login. Take a backup first if you want it (`docs/backup.md`).
 
 ```sh
 terraform -chdir=$TF apply -replace=proxmox_virtual_environment_vm.agent_devbox

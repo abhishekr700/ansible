@@ -1,0 +1,21 @@
+# Claude Code for the hermes user: same sandbox as Hermes (no sudo, docker group, tag:agent network).
+# Official installer: user-local into ~/.local/bin, checksum-verified, no root.
+# Sign-in is interactive and manual (`sudo -iu hermes`, then `claude`), so no credentials go in the repo.
+- name: Download the Claude Code installer
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.get_url:
+    url: "{{ claude_install_script_url }}"
+    dest: "{{ hermes_home }}/claude-install.sh"
+    mode: "0755"
+
+# The installer is the documented install path; no module exists for it.
+- name: Install Claude Code
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.command: "bash {{ hermes_home }}/claude-install.sh"
+  args:
+    chdir: "{{ hermes_home }}"
+    creates: "{{ hermes_home }}/.local/bin/claude"
+  environment:
+    HOME: "{{ hermes_home }}"

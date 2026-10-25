@@ -49,3 +49,6 @@ hermes_install_args: "--non-interactive --skip-computer-use"
 # Leave false until you've run `hermes setup` and the Telegram config as the hermes user.
 # Then set true and rerun with --tags hermes to enable and start the gateway.
 hermes_gateway_enabled: false
+
+# --- Claude Code (runs as the hermes user; sign in manually with `claude`) ---
+claude_install_script_url: https://claude.ai/install.sh

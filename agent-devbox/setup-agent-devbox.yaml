@@ -44,6 +44,13 @@
           tags: hermes
       tags: hermes
 
+    - name: Claude Code (hermes user)
+      ansible.builtin.include_tasks:
+        file: setup-agent-devbox-claude.yaml
+        apply:
+          tags: claude
+      tags: claude
+
     - name: Firewall (ufw)
       ansible.builtin.include_tasks:
         file: setup-agent-devbox-firewall.yaml

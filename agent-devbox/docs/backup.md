@@ -1,7 +1,7 @@
 # agent-devbox backups
 
 The VM can be rebuilt from code, so a backup only protects what lives inside it: `~hermes/.hermes`
-(config, memory, sessions) and anything the agent created.
+(config, memory, sessions), `~hermes/.claude` (Claude Code login and history) and anything the agents created.
 
 ## What exists today (checked 2026-10-25)
 
