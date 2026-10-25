@@ -15,3 +15,6 @@ roles/stefangweichinger.*
 crash.log
 # Saved plans can contain sensitive values
 tfplan
+
+# Public repo: inventory has public IPs of cloud hosts
+inventory.yaml
