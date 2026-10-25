@@ -1,0 +1,6 @@
+proxmox_blr_ws_crons_folder: "/opt/crons"
+proxmox_blr_ws_cron_logs_dir: "/var/log/crons"
+proxmox_blr_ws_backup_cron: "proxmox_blr_ws_photos_backup.sh"
+proxmox_blr_ws_backup_cron_log_dir: "backup"
+proxmox_blr_ws_backup_sync_gdrive_cron: "proxmox_blr_ws_photos_backup_sync_gdrive.sh"
+proxmox_blr_ws_backup_sync_gdrive_cron_log_dir: "backup_sync"

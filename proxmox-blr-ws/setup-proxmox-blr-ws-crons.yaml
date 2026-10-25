@@ -1,0 +1,62 @@
+---
+- name: Setup Proxmox BLR WS crons
+  hosts: proxmox-blr-ws
+  tasks:
+    - name: "Ensure cron and related directories exist"
+      become: true
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ proxmox_blr_ws_crons_folder }}"
+        - "{{ proxmox_blr_ws_cron_logs_dir }}"
+        - "{{ proxmox_blr_ws_cron_logs_dir }}/{{ proxmox_blr_ws_backup_cron_log_dir }}"
+        - "{{ proxmox_blr_ws_cron_logs_dir }}/{{ proxmox_blr_ws_backup_sync_gdrive_cron_log_dir }}"
+
+    - name: Copy cron files
+      become: true
+      ansible.builtin.copy:
+        src: "{{ local_crons_folder }}/{{ item.script }}"
+        dest: "{{ proxmox_blr_ws_crons_folder }}/{{ item.script }}"
+        mode: "0744"
+        backup: false
+      loop:
+        - { name: "Proxmox BLR WS photos backup cron", script: "{{ proxmox_blr_ws_backup_cron }}" }
+        - { name: "Proxmox BLR WS photos backup sync gdrive cron", script: "{{ proxmox_blr_ws_backup_sync_gdrive_cron }}" }
+
+    - name: Add cron job to crontab
+      become: true
+      ansible.builtin.cron:
+        name: "{{ item.name }}"
+        minute: "{{ item.minute }}"
+        hour: "{{ item.hour }}"
+        job: >
+          {{ proxmox_blr_ws_crons_folder }}/{{ item.script }} 2>&1 |
+          tee -a {{ proxmox_blr_ws_cron_logs_dir }}/{{ item.log_dir }}/$(date +\%Y-\%m-\%d_\%H-\%M-\%S).log |
+          systemd-cat -t "{{ item.name }}"
+        state: present
+      loop:
+        - {
+            name: "Proxmox BLR WS photos backup cron",
+            minute: "0",
+            hour: "*/3",
+            script: "{{ proxmox_blr_ws_backup_cron }}",
+            log_dir: "{{ proxmox_blr_ws_backup_cron_log_dir }}",
+          }
+        - {
+            name: "Proxmox BLR WS photos backup sync gdrive cron",
+            minute: "30",
+            hour: "*/3",
+            script: "{{ proxmox_blr_ws_backup_sync_gdrive_cron }}",
+            log_dir: "{{ proxmox_blr_ws_backup_sync_gdrive_cron_log_dir }}",
+          }
+
+    - name: Add log cleanup cron job
+      become: true
+      ansible.builtin.cron:
+        name: "Proxmox BLR WS cron log cleanup"
+        minute: "0"
+        hour: "1"
+        job: 'find {{ proxmox_blr_ws_cron_logs_dir }} -name "*.log" -type f -mtime +14 -delete'
+        state: present

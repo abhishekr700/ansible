@@ -1,0 +1,7 @@
+---
+- name: Setup proxmox-blr-ws
+  hosts: proxmox-blr-ws
+  tasks:
+
+- name: Import Proxmox BLR WS Crons Playbook
+  import_playbook: setup-proxmox-blr-ws-crons.yaml
