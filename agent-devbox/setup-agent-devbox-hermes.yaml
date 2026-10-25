@@ -1,0 +1,62 @@
+# Hermes Agent: https://hermes-agent.nousresearch.com/docs/getting-started/installation
+# Installed by its own script as the hermes user (no sudo for hermes), into ~/.hermes.
+# Runs as a systemd *user* service kept alive by lingering. No data is migrated.
+- name: Install Hermes system prerequisites
+  become: true
+  ansible.builtin.apt:
+    pkg:
+      - libatomic1 # otherwise the installer tries to sudo for it
+    state: present
+
+- name: Get hermes uid
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ hermes_user }}"
+
+- name: Enable lingering so the hermes user service runs without a login
+  become: true
+  ansible.builtin.command: loginctl enable-linger {{ hermes_user }}
+  args:
+    creates: "/var/lib/systemd/linger/{{ hermes_user }}"
+
+- name: Download the Hermes installer
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.get_url:
+    url: "{{ hermes_install_script_url }}"
+    dest: "{{ hermes_home }}/hermes-install.sh"
+    mode: "0755"
+
+# The installer is the documented install path; no module exists for it.
+- name: Install Hermes Agent
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.command: "bash {{ hermes_home }}/hermes-install.sh {{ hermes_install_args }}"
+  args:
+    chdir: "{{ hermes_home }}"
+    creates: "{{ hermes_home }}/.local/bin/hermes"
+  environment:
+    HOME: "{{ hermes_home }}"
+
+- name: Install the gateway as a systemd user unit
+  become: true
+  become_user: "{{ hermes_user }}"
+  # Without these flags it prompts on the tty and hangs; enabling/starting is the next task's job.
+  ansible.builtin.command: "{{ hermes_home }}/.local/bin/hermes gateway install --if-missing --no-start-now --no-start-on-login"
+  args:
+    creates: "{{ hermes_home }}/.config/systemd/user/hermes-gateway.service"
+  environment:
+    HOME: "{{ hermes_home }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['getent_passwd'][hermes_user][1] }}"
+
+- name: Enable and start the gateway (after `hermes setup` is done)
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.systemd_service:
+    name: hermes-gateway
+    scope: user
+    enabled: true
+    state: started
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['getent_passwd'][hermes_user][1] }}"
+  when: hermes_gateway_enabled

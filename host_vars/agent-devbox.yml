@@ -1,0 +1,51 @@
+---
+# agent-devbox: Hermes Agent VM on proxmox-blr-ws (terraform/proxmox-blr-ws/agent-devbox).
+
+# Overrides ansible.cfg's ssh_args for this host only: never forward the SSH agent
+# into a VM the agent controls, or it could use your keys to reach other hosts.
+ansible_ssh_args: "-o ControlMaster=auto -o ControlPersist=60s -o ForwardAgent=no"
+
+agent_devbox_hostname: agent-devbox
+
+# --- Tailscale ---
+agent_devbox_tailscale_tags: "tag:agent"
+# One-time key from terraform/tailscale, passed in the environment only. Needed only for the first join.
+agent_devbox_tailscale_authkey: "{{ lookup('ansible.builtin.env', 'TS_AUTHKEY') }}"
+
+# --- ufw ---
+# Outbound LAN filtering inside the guest is best effort: the agent is root-equivalent
+# through the docker group and can undo it, and container traffic bypasses it
+# (Docker's FORWARD rules run before ufw). The real boundary is the Tailscale policy, plus the
+# Proxmox VM firewall once the datacenter firewall is on.
+agent_devbox_lan_gateway: "192.168.5.1"
+# The LAN also hands out IPv6 (ULA fdac:9576:407b::/64 via RA); the router serves DNS on both.
+agent_devbox_lan_gateway_v6: "fdac:9576:407b::1"
+agent_devbox_lan_deny_out:
+  - "192.168.0.0/16"
+  - "10.0.0.0/8"
+  - "fc00::/7" # ULA, covers the LAN prefix
+  - "fe80::/10" # link-local; NDP is still allowed by ufw's before6 rules
+
+# --- fail2ban (template shared in shape with atlas) ---
+# SSH is only reachable over tailscale0 from your own devices, so this is defense in depth.
+# Tailscale ranges aren't ignored, otherwise the jail would never match anything.
+fail2ban_bantime: "1h"
+fail2ban_findtime: "10m"
+fail2ban_maxretry: 5
+fail2ban_banaction: "ufw"
+fail2ban_banaction_allports: "ufw"
+fail2ban_ignoreip: "127.0.0.1/8 ::1"
+
+# --- Docker (roles/debian-install-docker) ---
+# hermes is in the docker group (root-equivalent inside this VM, accepted). abhi already has sudo.
+docker_user: hermes
+
+# --- Hermes Agent ---
+hermes_user: hermes
+hermes_home: /home/hermes
+hermes_install_script_url: https://hermes-agent.nousresearch.com/install.sh
+# Headless VM: no computer-use driver. Browser tools stay.
+hermes_install_args: "--non-interactive --skip-computer-use"
+# Leave false until you've run `hermes setup` and the Telegram config as the hermes user.
+# Then set true and rerun with --tags hermes to enable and start the gateway.
+hermes_gateway_enabled: false

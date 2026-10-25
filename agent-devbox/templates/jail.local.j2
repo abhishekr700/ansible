@@ -1,0 +1,23 @@
+# Ansible managed: Do not edit manually.
+
+[DEFAULT]
+# Ban hosts (default is 1h):
+bantime = {{ fail2ban_bantime }}
+
+# A host is banned if it has generated "maxretry" during the last "findtime"
+findtime = {{ fail2ban_findtime }}
+
+# "maxretry" is the number of failures before a host gets banned
+maxretry = {{ fail2ban_maxretry }}
+
+# Ignore specific IPs/subnets (e.g. Tailscale, local subnets) to prevent self-lockout
+ignoreip = {{ fail2ban_ignoreip }}
+
+# Ban action to take (e.g. 'dummy' for dry-run/logging, 'ufw' for blocking)
+banaction = {{ fail2ban_banaction }}
+banaction_allports = {{ fail2ban_banaction_allports }}
+
+[sshd]
+enabled = true
+# Debian 13 has no /var/log/auth.log; read sshd from the journal.
+backend = systemd

@@ -1,0 +1,65 @@
+# Main setup playbook for agent-devbox (Hermes Agent VM on proxmox-blr-ws).
+# The VM itself comes from terraform/proxmox-blr-ws/agent-devbox; see agent-devbox/Readme.md.
+---
+- name: Setup agent-devbox
+  hosts: agent-devbox
+  gather_facts: true
+
+  pre_tasks:
+    - name: Base system (unattended-upgrades, sshd, fail2ban)
+      ansible.builtin.include_tasks:
+        file: setup-agent-devbox-base.yaml
+        apply:
+          tags: base
+      tags: base
+
+    - name: Tailscale (tag:agent)
+      ansible.builtin.include_tasks:
+        file: setup-agent-devbox-tailscale.yaml
+        apply:
+          tags: tailscale
+      tags: tailscale
+
+    # Needs to exist before the docker role adds it to the docker group.
+    - name: Create hermes user (no sudo)
+      become: true
+      ansible.builtin.user:
+        name: "{{ hermes_user }}"
+        home: "{{ hermes_home }}"
+        shell: /bin/bash
+        generate_ssh_key: true # its public key is what you grant for temporary SSH elsewhere
+        ssh_key_type: ed25519
+        ssh_key_comment: "hermes@agent-devbox"
+      tags: hermes
+
+  roles:
+    - role: debian-install-docker
+      tags: docker
+
+  tasks:
+    - name: Hermes Agent
+      ansible.builtin.include_tasks:
+        file: setup-agent-devbox-hermes.yaml
+        apply:
+          tags: hermes
+      tags: hermes
+
+    - name: Firewall (ufw)
+      ansible.builtin.include_tasks:
+        file: setup-agent-devbox-firewall.yaml
+        apply:
+          tags: firewall
+      tags: firewall
+
+  handlers:
+    - name: Restart ssh
+      become: true
+      ansible.builtin.service:
+        name: ssh
+        state: restarted
+
+    - name: Restart fail2ban
+      become: true
+      ansible.builtin.service:
+        name: fail2ban
+        state: restarted

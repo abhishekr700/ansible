@@ -1,0 +1,67 @@
+- name: Set hostname
+  become: true
+  ansible.builtin.hostname:
+    name: "{{ agent_devbox_hostname }}"
+
+- name: Install base packages
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    pkg:
+      - unattended-upgrades
+      - apt-listchanges
+      - ufw
+      - fail2ban
+      - python3-systemd # fail2ban systemd backend
+      - qemu-guest-agent
+      - acl # lets Ansible become the unprivileged hermes user
+      - gnupg # apt_repository in roles/debian-install-docker needs it; not in the cloud image
+      - git
+      - curl
+    state: present
+
+- name: Enable unattended upgrades
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Ensure qemu-guest-agent is running
+  become: true
+  ansible.builtin.service:
+    name: qemu-guest-agent
+    state: started
+    enabled: true
+
+- name: Harden sshd (key-only, no root login, no agent forwarding)
+  become: true
+  ansible.builtin.template:
+    src: templates/10-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/sbin/sshd -t -f %s
+  notify: Restart ssh
+
+- name: Configure fail2ban jail.local
+  become: true
+  ansible.builtin.template:
+    src: templates/jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart fail2ban
+
+- name: Ensure fail2ban is running and enabled
+  become: true
+  ansible.builtin.service:
+    name: fail2ban
+    state: started
+    enabled: true

@@ -1,0 +1,49 @@
+# Runs last. ufw keeps established connections, so the bootstrap SSH session survives;
+# after this, SSH works only over tailscale0.
+- name: Allow SSH on tailscale0 only
+  become: true
+  community.general.ufw:
+    rule: allow
+    direction: in
+    interface: tailscale0
+    port: "22"
+    proto: tcp
+
+- name: Allow DNS and DHCP renewals to the LAN gateway
+  become: true
+  community.general.ufw:
+    rule: allow
+    direction: out
+    to_ip: "{{ item.to }}"
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+  loop:
+    - { to: "{{ agent_devbox_lan_gateway }}", port: "53", proto: udp }
+    - { to: "{{ agent_devbox_lan_gateway }}", port: "53", proto: tcp }
+    - { to: "{{ agent_devbox_lan_gateway }}", port: "67", proto: udp }
+    - { to: "{{ agent_devbox_lan_gateway_v6 }}", port: "53", proto: udp }
+    - { to: "{{ agent_devbox_lan_gateway_v6 }}", port: "53", proto: tcp }
+
+# Best effort only, see host_vars/agent-devbox.yml.
+- name: Deny outbound to the LAN
+  become: true
+  community.general.ufw:
+    rule: deny
+    direction: out
+    to_ip: "{{ item }}"
+  loop: "{{ agent_devbox_lan_deny_out }}"
+
+- name: Set default policies
+  become: true
+  community.general.ufw:
+    direction: "{{ item.direction }}"
+    default: "{{ item.policy }}"
+  loop:
+    - { direction: incoming, policy: deny }
+    - { direction: outgoing, policy: allow }
+
+- name: Enable ufw
+  become: true
+  community.general.ufw:
+    state: enabled
+    logging: "on"

@@ -1,0 +1,57 @@
+# https://tailscale.com/kb/1174/install-debian-trixie
+- name: Add Tailscale APT repository
+  become: true
+  ansible.builtin.deb822_repository:
+    name: tailscale
+    types: deb
+    uris: https://pkgs.tailscale.com/stable/debian
+    suites: "{{ ansible_facts['distribution_release'] }}"
+    components: main
+    signed_by: "https://pkgs.tailscale.com/stable/debian/{{ ansible_facts['distribution_release'] }}.noarmor.gpg"
+
+- name: Install Tailscale
+  become: true
+  ansible.builtin.apt:
+    name: tailscale
+    update_cache: true
+    state: present
+
+- name: Ensure tailscaled is running
+  become: true
+  ansible.builtin.service:
+    name: tailscaled
+    state: started
+    enabled: true
+
+- name: Read Tailscale state
+  become: true
+  ansible.builtin.command: tailscale status --json
+  register: tailscale_status
+  changed_when: false
+  failed_when: false
+
+- name: Set Tailscale join fact
+  ansible.builtin.set_fact:
+    tailscale_joined: "{{ tailscale_status.rc == 0 and (tailscale_status.stdout | from_json).BackendState == 'Running' }}"
+
+- name: Require an auth key for the first join
+  ansible.builtin.assert:
+    that: agent_devbox_tailscale_authkey | length > 0
+    fail_msg: >-
+      Not joined yet and TS_AUTHKEY is empty. Run with
+      TS_AUTHKEY="$(terraform -chdir=terraform/tailscale output -raw agent_devbox_auth_key)"
+  when: not tailscale_joined
+
+# No module for `tailscale up`. Routes from subnet routers stay off (the default on
+# Linux), so the agent can't reach the LAN through the tailnet.
+- name: Join the tailnet as tag:agent
+  become: true
+  ansible.builtin.command: >-
+    tailscale up
+    --auth-key={{ agent_devbox_tailscale_authkey }}
+    --advertise-tags={{ agent_devbox_tailscale_tags }}
+    --hostname={{ agent_devbox_hostname }}
+    --accept-routes=false
+  no_log: true
+  when: not tailscale_joined
+  changed_when: true
