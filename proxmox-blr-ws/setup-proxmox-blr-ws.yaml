@@ -5,3 +5,6 @@
 
 - name: Import Proxmox BLR WS Crons Playbook
   import_playbook: setup-proxmox-blr-ws-crons.yaml
+
+- name: Import VM base inputs Playbook
+  import_playbook: setup-proxmox-blr-ws-vm-base.yaml

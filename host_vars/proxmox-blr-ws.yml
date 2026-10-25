@@ -4,3 +4,10 @@ proxmox_blr_ws_backup_cron: "proxmox_blr_ws_photos_backup.sh"
 proxmox_blr_ws_backup_cron_log_dir: "backup"
 proxmox_blr_ws_backup_sync_gdrive_cron: "proxmox_blr_ws_photos_backup_sync_gdrive.sh"
 proxmox_blr_ws_backup_sync_gdrive_cron_log_dir: "backup_sync"
+
+# Debian 13 cloud image for terraform/proxmox-blr-ws/debian13-template (setup-proxmox-blr-ws-vm-base.yaml).
+# Bump all three together (from https://cloud.debian.org/images/cloud/trixie/<build>/SHA512SUMS),
+# and update image_file_id in the template's variables.tf.
+debian13_image_name: debian-13-genericcloud-amd64-20261021-2638.qcow2
+debian13_image_url: "https://cloud.debian.org/images/cloud/trixie/20261021-2638/debian-13-genericcloud-amd64-20261021-2638.qcow2"
+debian13_image_sha512: 16e0965312c56feb331049d45d2b1b5778f3f942a33d4300eedbb97527707f2bea87c0006f3e4cc7a25fadbff739c4e235a51fb9bcd1b66fd554f7f8e80ba45c
