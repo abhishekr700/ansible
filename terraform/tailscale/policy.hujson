@@ -239,6 +239,9 @@
 	"derpMap":   {},
 	"tagOwners": {"tag:agent": ["autogroup:admin"]},
 
+	// Exit nodes advertised by the user's own (untagged) devices are approved automatically (atlas).
+	"autoApprovers": {"exitNode": ["autogroup:member"]},
+
 	// Test access rules every time they're saved. A failing test rejects the policy.
 	"tests": [
 		{
@@ -255,6 +258,7 @@
 				"hermes:22",
 				"vm-2:3001",
 				"192.168.1.1:22", // subnet routes
+				"1.1.1.1:443", // internet via an exit node
 			],
 		},
 		{

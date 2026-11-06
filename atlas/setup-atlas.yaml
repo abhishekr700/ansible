@@ -16,6 +16,13 @@
     - name: Setup Atlas firewall
       ansible.builtin.include_tasks: setup-atlas-firewall.yaml
 
+    - name: Setup Atlas as a Tailscale exit node
+      ansible.builtin.include_tasks:
+        file: setup-atlas-tailscale.yaml
+        apply:
+          tags: tailscale
+      tags: tailscale
+
 # - name: Setup Caddy
 #   ansible.builtin.import_playbook: setup-caddy.yaml
 

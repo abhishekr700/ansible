@@ -1,0 +1,47 @@
+# Make atlas a Tailscale exit node.
+# Tailscale itself was installed by hand; this only enables forwarding and advertises the exit node.
+# Approval: autoApprovers.exitNode in terraform/tailscale/policy.hujson.
+
+- name: Enable IP forwarding for the exit node
+  become: true
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: "1"
+    sysctl_file: /etc/sysctl.d/99-tailscale.conf
+    sysctl_set: true
+    state: present
+    reload: true
+  loop:
+    - net.ipv4.ip_forward
+    - net.ipv6.conf.all.forwarding
+
+- name: Read current Tailscale prefs
+  become: true
+  ansible.builtin.command: tailscale debug prefs
+  register: atlas_tailscale_prefs
+  changed_when: false
+  check_mode: false
+
+- name: Advertise atlas as an exit node
+  become: true
+  ansible.builtin.command: tailscale set --advertise-exit-node
+  when: "'0.0.0.0/0' not in ((atlas_tailscale_prefs.stdout | from_json).AdvertiseRoutes | default([], true))"
+  changed_when: true
+
+# UDP GRO forwarding improves exit-node throughput. Persisted via networkd-dispatcher.
+- name: Persist UDP GRO forwarding on the uplink
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/networkd-dispatcher/routable.d/50-tailscale-gro
+    mode: "0755"
+    content: |
+      #!/bin/sh
+      # Managed by Ansible (atlas/setup-atlas-tailscale.yaml)
+      /usr/sbin/ethtool -K {{ atlas_uplink_interface }} rx-udp-gro-forwarding on rx-gro-list off
+  register: atlas_gro_script
+
+- name: Apply UDP GRO forwarding now
+  become: true
+  ansible.builtin.command: /etc/networkd-dispatcher/routable.d/50-tailscale-gro
+  when: atlas_gro_script.changed
+  changed_when: true
