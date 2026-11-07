@@ -8,6 +8,7 @@ Homelab infra for one person. Ansible configures machines; Terraform creates VMs
 - `terraform/<scope>/<root>/`: one root per stack, local state (gitignored).
 - Machine docs, so start there: `agent-devbox/Readme.md` (Hermes Agent + Claude Code VM on proxmox-blr-ws: layers, credentials, rebuild).
   Tailnet policy: `terraform/tailscale/README.md`. Agent git access (GitLab deploy key, mirror to GitHub): `terraform/gitlab/README.md`.
+  Code repos live on GitLab and GitHub only gets `main`, so new CI goes in GitLab CI (pattern: foodies-app `.gitlab-ci.yml`, `docs/ci.md`).
 - `hermes` in the inventory is a Raspberry Pi, not Hermes Agent.
 
 ## Conventions
