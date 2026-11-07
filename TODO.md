@@ -12,6 +12,11 @@ turn ufw off and reach the LAN (Proxmox UI, Jellyfin, router). Tailscale doesn't
 - Check its default policy keeps SSH/8006 open for your own access, apply, then test from the VM that the
   LAN, v4 and v6, is unreachable with ufw switched off.
 
+## foodies-app: local dev writes to the production DB
+`foodies-app/.env` points at the production Supabase project, so a local `npm run dev` or
+the e2e tests write real data. That's how "Debug User" (e2e-place-add@example.com) got into production on 2026-10-04;
+it stays, by the user's choice. Fix: a separate dev database (local Postgres in Docker, or a second Supabase project).
+
 ## Homelab agent (trusted, holds credentials)
 A second agent, separate from the dev agent on agent-devbox, for delegated homelab tasks.
 - Separate VM and credentials. **No channel from the dev agent**: no shared memory, Telegram bot or repos it acts on.

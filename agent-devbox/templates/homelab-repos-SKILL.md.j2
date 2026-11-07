@@ -51,5 +51,6 @@ CI rules:
 
 ## Testing
 - Run tests and the app inside this VM (Docker is available). Say what you ran and what passed.
-- Use dummy or seed data. You don't have production databases or secrets; don't ask for them in a repo or commit.
+- Use dummy or seed data, never production. Read-only production access for analysis is in the `prod-db` skill.
+  You don't have production secrets; don't ask for them in a repo or commit.
   Config comes from `.env` files: keep real values out of git, and update `.env.example` when you add a variable.

@@ -58,6 +58,13 @@
           tags: git
       tags: git
 
+    - name: Read-only production databases
+      ansible.builtin.include_tasks:
+        file: setup-agent-devbox-db.yaml
+        apply:
+          tags: db
+      tags: db
+
     - name: Agent context (rules and skills)
       ansible.builtin.include_tasks:
         file: setup-agent-devbox-context.yaml

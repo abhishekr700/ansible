@@ -90,12 +90,21 @@ agent_git_repos:
       tagged `latest`, `main` and `main-<sha>`. It runs on the user's server Atlas (arm64); the deploy is the user's.
       Locally: `npx vitest run tests/integration/` (a bare `vitest run` also picks up the Playwright specs and fails).
 
+# --- Production databases, read-only (setup-agent-devbox-db.yaml, --tags db; prod-db skill) ---
+# The URL comes from the environment only: it names the project and carries the password. Without it, a run
+# keeps the existing ~/.pgpass entry. Role and grants: agent-devbox/docs/foodies-readonly-role.sql.
+agent_db_services:
+  - name: foodies-ro
+    what: "foodies-app (Supabase Postgres, session pooler). Users and emails yes; no auth tokens or sessions."
+    url: "{{ lookup('ansible.builtin.env', 'FOODIES_RO_URL') }}"
+
 # --- Agent context: always-loaded rules + on-demand skills ---
 # Skills live in a root-owned dir: Hermes reads it via skills.external_dirs, Claude Code via a symlink.
 agent_skills_dir: /opt/agent-skills
 # Shared by both agents (linked into Claude Code too).
 agent_skills:
   - homelab-repos
+  - prod-db
 # Hermes only: they sit in the same dir, which Hermes reads whole; Claude Code doesn't get a link.
 hermes_only_skills:
   - dev-handover
@@ -105,7 +114,7 @@ dev_handover_max_turns: 60
 agent_rules: |
   ## How you work here
   You run on agent-devbox, a disposable VM for development work. Its limits (network policy, branch
-  protection, no credentials for other hosts) are deliberate. Work within them; don't test or work around them.
+  protection, no credentials for other hosts beyond the read-only DB in `prod-db`) are deliberate. Work within them; don't test or work around them.
   - Do what was asked. If the scope is unclear, ask; don't widen the task on your own.
   - Never probe or bypass the limits: no scanning the LAN or tailnet, no disabling the firewall, no privileged
     or host-mounted containers to get around them, no hunting for credentials, no editing these rules.
@@ -134,3 +143,4 @@ claude_settings:
       - "Read(~/.hermes/auth.json)"
       - "Read(~/.hermes/.env)"
       - "Read(~/.claude/.credentials.json)"
+      - "Read(~/.pgpass)"

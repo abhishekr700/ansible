@@ -1,7 +1,8 @@
 # agent-devbox
 
 A disposable VM (VMID 120) on `proxmox-blr-ws` that runs Hermes Agent and Claude Code. The agents have
-full control inside the VM, but no standing access to storage or other hosts.
+full control inside the VM, but no standing access to storage or other hosts. One exception: a read-only login to
+foodies-app's production database ("Read-only production DB" below).
 
 ## The big picture (read this first)
 
@@ -55,6 +56,7 @@ Four layers, each built on the one before. **Terraform creates things; Ansible c
 | Ansible → host | your SSH key as root | `~/.ssh` | the host (as always) |
 | Ansible → VM | your SSH key as `abhi` (passwordless sudo) | `~/.ssh` | the VM |
 | Hermes in the VM | none for other hosts | — | inside the VM only |
+| Agents → foodies-app DB | Supabase role `foodies_ro` (read-only) | `~hermes/.pgpass`, set from `FOODIES_RO_URL` at run time | `SELECT` on app tables and `User` (emails included); no `Account`/`Session`/`VerificationToken` |
 
 ### Users on the VM
 
@@ -104,6 +106,9 @@ You run `terraform apply` yourself (Claude's auto mode blocks it).
   for both agents, `dev-handover` for Hermes only: it hands coding to `claude -p --permission-mode auto`).
   Claude Code is on the Pro subscription and its settings deny reads of `~/.ssh` and the token files. Tested: auto mode,
   the deny rule, and the skill showing up. Hermes needs a gateway restart to load the skills dir.
+- 2026-11-08: read-only foodies-app DB (`--tags db`, skill `prod-db`). Tested from the VM: reads work; writes are
+  refused by the grants even with read-only mode switched off; `Account` and `Session` are denied. Hermes answered a
+  data question through the skill unprompted, with only `psql service=foodies-ro` calls. Second run gave `changed=0`.
 
 Isolation, as built:
 - **Tailscale policy:** `tag:agent` → `atlas:443` only. This is the real boundary.
@@ -112,6 +117,8 @@ Isolation, as built:
 - **Proxmox VM firewall:** written but **off** (`vm_firewall_enabled = false`) because the datacenter
   firewall is off. Turn both on when you're next at the machine.
 - **Storage:** no NFS, SMB or ZFS mounts, no passthrough. The `hermes` user has no sudo; it's in the docker group.
+- **Production data:** read-only on foodies-app's Supabase DB (role `foodies_ro`), users and emails included, no auth
+  tokens. It goes over the internet, outside the tailnet policy. See "Read-only production DB".
 
 ## Prerequisites (once)
 
@@ -191,6 +198,34 @@ terraform -chdir=$TF destroy
 
 Then remove the device in the Tailscale console. The template, the snippet and the image stay;
 remove them with `terraform -chdir=terraform/proxmox-blr-ws/debian13-template destroy` if you want.
+
+## Read-only production DB (foodies-app)
+
+The agents can query foodies-app's Supabase Postgres with `psql service=foodies-ro` (skill `prod-db`).
+It goes over the internet, so the tailnet policy doesn't change.
+
+What it can read: every app table, `User` included (emails too, the user's call on 2026-11-08). Never `Account`
+(Google OAuth tokens), `Session` or `VerificationToken`. The grants are in `docs/foodies-readonly-role.sql`.
+
+Set up, rotate the password, or apply new grants, all from the laptop (the admin `DIRECT_URL` comes from
+`~/1Personal/02Projects/00Env/foodies-app.env.production`):
+
+```sh
+OUT=$(mktemp)
+python3 -I agent-devbox/docs/supabase-ro-role.py ~/1Personal/02Projects/00Env/foodies-app.env.production "$OUT" \
+  agent-devbox/docs/foodies-readonly-role.sql      # leave the SQL file out to only rotate the password
+FOODIES_RO_URL="$(cat "$OUT")" ansible-playbook -i inventory.yaml agent-devbox/setup-agent-devbox.yaml --tags db,context
+rm -P "$OUT"
+```
+
+In the check the SQL prints, only `user_email` and `rating_ok` should be true. Without `FOODIES_RO_URL`, `--tags db`
+leaves the existing password on the VM alone. Right after a rotation, Supabase's pooler can reject the new password
+for a minute or so (`password authentication failed`, seen 2026-11-08). Retry before debugging.
+
+Revoke: `drop role foodies_ro;` in Supabase.
+Weak points: anything the role can read can leave the box (the agent has internet), and the rows go to the
+model providers. `~/.pgpass` only keeps the password out of transcripts: a shell `cat` still reads it.
+`sslmode=require` encrypts the connection but doesn't check the server's certificate.
 
 ## Temporary SSH from the agent to another host
 

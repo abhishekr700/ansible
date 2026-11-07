@@ -1,0 +1,46 @@
+# Read-only access to production databases for the agents (hermes user), used through the prod-db skill.
+# The role and grants live on the database side (agent-devbox/docs/foodies-readonly-role.sql).
+# The connection string comes from the environment only (repo is public), so a run without it keeps what's there.
+# psql reads ~/.pg_service.conf and ~/.pgpass itself: the agents run `psql service=<name>` and never see the password
+# (Claude's deny rule covers its file tools; a shell `cat` still could, so this hides it, it doesn't protect it).
+- name: Install the PostgreSQL client
+  become: true
+  ansible.builtin.apt:
+    name: postgresql-client
+    state: present
+
+- name: Connection service for psql
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.blockinfile:
+    path: "{{ hermes_home }}/.pg_service.conf"
+    create: true
+    mode: "0600"
+    marker: "# {mark} ANSIBLE MANAGED: {{ item.name }}"
+    block: |
+      [{{ item.name }}]
+      host={{ item.url | urlsplit('hostname') }}
+      port={{ item.url | urlsplit('port') | default(5432, true) }}
+      dbname={{ (item.url | urlsplit('path'))[1:] }}
+      user={{ item.url | urlsplit('username') }}
+      sslmode=require
+      application_name=agent-devbox
+  loop: "{{ agent_db_services | selectattr('url') }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Password for psql
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.lineinfile:
+    path: "{{ hermes_home }}/.pgpass"
+    create: true
+    mode: "0600"
+    regexp: "^{{ (item.url | urlsplit('hostname')) | regex_escape }}:[^:]*:[^:]*:{{ (item.url | urlsplit('username')) | regex_escape }}:"
+    line: >-
+      {{ item.url | urlsplit('hostname') }}:{{ item.url | urlsplit('port') | default(5432, true) }}:{{
+      (item.url | urlsplit('path'))[1:] }}:{{ item.url | urlsplit('username') }}:{{ item.url | urlsplit('password') }}
+  loop: "{{ agent_db_services | selectattr('url') }}"
+  loop_control:
+    label: "{{ item.name }}"
+  no_log: true

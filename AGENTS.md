@@ -22,7 +22,7 @@ Homelab infra for one person. Ansible configures machines; Terraform creates VMs
 - Scoped credentials only (e.g. the Proxmox token is limited to pool `agent`), never root@pam. Secrets go in env vars or gitignored files, never in the repo, and out of Terraform state where possible.
 - Least exposure: open only the path that's used (SSH on `tailscale0`), key-only SSH, no root login, no agent forwarding into untrusted VMs.
 - The Tailscale policy is the network boundary. Tag untrusted machines, keep `tests` in the policy, and no `src: "*"` (use `autogroup:member`).
-- Untrusted/agent VMs: no host mounts or passthrough, no creds for other hosts, block LAN egress on IPv4 **and IPv6** (the LAN runs ULA).
+- Untrusted/agent VMs: no host mounts or passthrough, no creds for other hosts (one exception: agent-devbox's read-only foodies-app DB, in its Readme), block LAN egress on IPv4 **and IPv6** (the LAN runs ULA).
 - Say so when a layer is weak: an in-guest ufw can be undone by root/docker users, and Docker bypasses ufw.
 - Pin and verify inputs: image builds with checksums, provider versions.
 
