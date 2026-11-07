@@ -3,10 +3,11 @@
 Homelab infra for one person. Ansible configures machines; Terraform creates VMs and the tailnet policy.
 
 ## Map
+- Open work and known gaps: `TODO.md`.
 - `inventory.yaml` (root, gitignored: it has public IPs and the repo is public), `host_vars/<host>.yml`, `roles/`, one folder per host with `setup-<host>.yaml` as the entry playbook.
 - `terraform/<scope>/<root>/`: one root per stack, local state (gitignored).
 - Machine docs, so start there: `agent-devbox/Readme.md` (Hermes Agent + Claude Code VM on proxmox-blr-ws: layers, credentials, rebuild).
-  Tailnet policy: `terraform/tailscale/README.md`.
+  Tailnet policy: `terraform/tailscale/README.md`. Agent git access (GitLab deploy key, mirror to GitHub): `terraform/gitlab/README.md`.
 - `hermes` in the inventory is a Raspberry Pi, not Hermes Agent.
 
 ## Conventions

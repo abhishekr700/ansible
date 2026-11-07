@@ -51,6 +51,20 @@
           tags: claude
       tags: claude
 
+    - name: Git access (GitLab deploy key)
+      ansible.builtin.include_tasks:
+        file: setup-agent-devbox-git.yaml
+        apply:
+          tags: git
+      tags: git
+
+    - name: Agent context (rules and skills)
+      ansible.builtin.include_tasks:
+        file: setup-agent-devbox-context.yaml
+        apply:
+          tags: context
+      tags: context
+
     - name: Firewall (ufw)
       ansible.builtin.include_tasks:
         file: setup-agent-devbox-firewall.yaml

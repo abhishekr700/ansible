@@ -99,6 +99,11 @@ You run `terraform apply` yourself (Claude's auto mode blocks it).
 - Found and fixed on the way: the cloud image has no gpg (added `gnupg`); `hermes gateway install`
   prompts on the tty (now non-interactive flags); the LAN also runs IPv6 (added v6 blocks).
 - 2026-10-26: Claude Code (2.1.310) installed for `hermes`; the second run gave `changed=0`.
+- 2026-11-07: git access through a GitLab deploy key (`--tags git`, see `terraform/gitlab/README.md`). Agent context
+  (`--tags context`): short rules in SOUL.md/CLAUDE.md, plus skills in root-owned `/opt/agent-skills` (`homelab-repos`
+  for both agents, `dev-handover` for Hermes only: it hands coding to `claude -p --permission-mode auto`).
+  Claude Code is on the Pro subscription and its settings deny reads of `~/.ssh` and the token files. Tested: auto mode,
+  the deny rule, and the skill showing up. Hermes needs a gateway restart to load the skills dir.
 
 Isolation, as built:
 - **Tailscale policy:** `tag:agent` → `atlas:443` only. This is the real boundary.

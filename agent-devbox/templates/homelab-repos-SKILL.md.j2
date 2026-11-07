@@ -1,0 +1,44 @@
+---
+name: homelab-repos
+description: "How the user's code repos are hosted and how to work on them: GitLab remotes, agent/* branches, merge requests, the mirror to GitHub, testing. Load before cloning, committing or pushing to any of the user's repos."
+version: 1.0.0
+---
+<!-- Managed by Ansible (agent-devbox/templates/homelab-repos-SKILL.md.j2). Local edits are overwritten. -->
+# The user's repos and how to work on them
+
+## Where the code lives
+- **GitLab is the source of truth:** `git@gitlab.com:{{ agent_git_owner }}/<repo>.git`. Use only this as a remote.
+- **GitHub (`{{ agent_git_owner }}/<repo>`) is a read-only copy.** GitLab pushes `main` there after the user merges,
+  and deploys build from GitHub. Never add GitHub as a remote or push there.
+- **Your access:** the SSH key `~/.ssh/{{ agent_git_key_name }}` is a GitLab deploy key. It can clone and push branches.
+  It has no API: no `glab`, no issues, no MR comments, no merging. `main` is protected; a rejected push to it is expected.
+
+## Repos you can work on
+| Repo | What it is | Stack |
+|---|---|---|
+{% for r in agent_git_repos %}
+| `{{ r.name }}` | {{ r.what }} | {{ r.stack }} |
+{% endfor %}
+
+Anything else, including the user's `ansible` homelab repo, is out of reach on purpose. If a task needs it, say so.
+
+## Workflow
+1. Clone into `~/work/<repo>`. Before starting, `git fetch` and branch from a fresh `origin/main`.
+2. Branch name: `agent/<short-topic>`. One topic per branch.
+3. Commits: match the repo's existing style (usually Conventional Commits, e.g. `fix(rules): ...`).
+   End every commit message with a blank line, then exactly:
+   `Co-authored-by: {{ agent_git_coauthor }}`
+4. Push and open the MR in one step:
+   `git push -u origin agent/<topic> -o merge_request.create -o merge_request.target=main -o merge_request.title="<title>"`
+   Send the user the MR link GitLab prints. If none is printed, send the branch name.
+5. Review: you can't read MR comments, so the user relays feedback. Push fixes to the same branch.
+   Don't force-push a branch the user has reviewed. Don't delete branches you didn't create.
+
+## After merge
+Merging is the user's call and it ships: `main` mirrors to GitHub, which is what the homelab deploys from
+(expenseTracker's image is built by GitHub Actions). Nothing you push to a branch deploys anywhere.
+
+## Testing
+- Run tests and the app inside this VM (Docker is available). Say what you ran and what passed.
+- Use dummy or seed data. You don't have production databases or secrets; don't ask for them in a repo or commit.
+  Config comes from `.env` files: keep real values out of git, and update `.env.example` when you add a variable.

@@ -1,0 +1,52 @@
+---
+name: dev-handover
+description: "Hand coding work (multi-file changes, debugging, tests, a merge request end to end) to Claude Code headless, follow it up, and report back. Load before starting any coding task."
+version: 1.0.0
+---
+<!-- Managed by Ansible (agent-devbox/templates/dev-handover-SKILL.md.j2). Local edits are overwritten. -->
+# Handing coding work to Claude Code
+
+Claude Code is the better harness for code. You stay the front door: you understand the request, brief
+Claude Code, check its result and report to the user. Small non-code tasks you can just do yourself.
+
+## 1. Brief
+Claude Code starts knowing nothing about this conversation. Write a self-contained brief:
+- the repo (one of those in the `homelab-repos` skill) and its path `~/work/<repo>` (clone it first if missing);
+- the goal, and what "done" means;
+- how to test it (the test command, or "find and run the existing tests");
+- constraints the user gave;
+- the ending: "Load the homelab-repos skill. Commit on an agent/<topic> branch, push it and open the MR as that
+  skill says. Reply with the MR link, what you tested, and anything you didn't check."
+
+## 2. Run it in the background
+Coding runs take minutes. Run it as a background terminal job with completion notification, never a short timeout:
+
+```
+cd ~/work/<repo> && claude -p "<brief>" \
+  --permission-mode auto --max-turns {{ dev_handover_max_turns }} \
+  --output-format json -w <short-topic> </dev/null
+```
+
+- `--permission-mode auto`: a classifier approves routine steps and blocks risky ones. Blocked steps are listed in
+  `permission_denials`. Don't switch to `bypassPermissions` to get past them; tell the user what was blocked.
+- `-w <short-topic>`: its own git worktree, so parallel tasks don't collide.
+- `</dev/null`: with stdin open, `claude -p` reads it as extra input and can swallow what follows.
+- One task per run. Don't start a second run in the same worktree while one is going.
+
+## 3. Check the result
+From the JSON: `result` (its summary), `session_id`, `num_turns`, `permission_denials`, `is_error`.
+Don't trust the summary alone: look at `git log` and `git diff origin/main...` on the branch, and confirm the tests
+it claims to have run. If it hit `--max-turns` or errored, say so; don't present it as done.
+
+## 4. Report to the user
+The MR link, two or three lines on what changed, what was tested, anything blocked or unchecked.
+
+## 5. Follow-ups
+For review feedback, resume the same session so it keeps its context:
+
+```
+cd ~/work/<repo> && claude -p "<feedback>" --resume <session_id> \
+  --permission-mode auto --max-turns {{ dev_handover_max_turns }} --output-format json </dev/null
+```
+
+Keep the `session_id` with the task (memory or the Kanban card) so you can resume later.

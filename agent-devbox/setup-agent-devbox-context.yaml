@@ -1,0 +1,104 @@
+# What the agents (Hermes and Claude Code, both as hermes) know about this setup, with progressive disclosure:
+# - agent_rules: short, loaded into every session via SOUL.md / CLAUDE.md;
+# - skills in agent_skills_dir: only the description is in context until the agent loads one.
+# The skills dir is root-owned, so the agents can't change it (short of root via docker; the next run restores it).
+- name: Create the shared skills dir
+  become: true
+  ansible.builtin.file:
+    path: "{{ agent_skills_dir }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ [''] + agent_skills + hermes_only_skills }}"
+
+- name: Install skills
+  become: true
+  ansible.builtin.template:
+    src: "templates/{{ item }}-SKILL.md.j2"
+    dest: "{{ agent_skills_dir }}/{{ item }}/SKILL.md"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ agent_skills + hermes_only_skills }}"
+
+# Hermes: external dirs are read-only to it; a local skill with the same name would take precedence.
+- name: Point Hermes at the shared skills dir
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.blockinfile:
+    path: "{{ hermes_home }}/.hermes/config.yaml"
+    insertafter: "^skills:"
+    marker: "  # {mark} ANSIBLE MANAGED: external skills"
+    block: |2
+        external_dirs:
+          - {{ agent_skills_dir }}
+
+- name: Make sure Claude Code's skills dir exists
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.file:
+    path: "{{ hermes_home }}/.claude/skills"
+    state: directory
+
+- name: Link the shared skills into Claude Code
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.file:
+    src: "{{ agent_skills_dir }}/{{ item }}"
+    dest: "{{ hermes_home }}/.claude/skills/{{ item }}"
+    state: link
+  loop: "{{ agent_skills }}"
+  ignore_errors: "{{ ansible_check_mode }}" # in --check the skill dir isn't created, so the link target is missing
+
+- name: Make sure the agents' config dirs exist
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ hermes_home }}/.hermes"
+    - "{{ hermes_home }}/.claude"
+
+# Replaced by the agent rules block below (git details moved into the homelab-repos skill).
+- name: Remove the old git workflow block
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.blockinfile:
+    path: "{{ item }}"
+    marker: "<!-- {mark} ANSIBLE MANAGED: git workflow -->"
+    state: absent
+  loop:
+    - "{{ hermes_home }}/.hermes/SOUL.md"
+    - "{{ hermes_home }}/.claude/CLAUDE.md"
+
+# blockinfile, so whatever `hermes setup` or you put in these files stays.
+- name: Agent rules for Hermes and Claude Code
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.blockinfile:
+    path: "{{ item }}"
+    create: true
+    marker: "<!-- {mark} ANSIBLE MANAGED: agent rules -->"
+    block: "{{ agent_rules }}"
+  loop:
+    - "{{ hermes_home }}/.hermes/SOUL.md"
+    - "{{ hermes_home }}/.claude/CLAUDE.md"
+
+- name: Hermes-only rules
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.blockinfile:
+    path: "{{ hermes_home }}/.hermes/SOUL.md"
+    marker: "<!-- {mark} ANSIBLE MANAGED: hermes rules -->"
+    block: "{{ hermes_rules }}"
+
+# Whole file: it only held the theme before.
+- name: Claude Code settings
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.copy:
+    content: "{{ claude_settings | to_nice_json }}\n"
+    dest: "{{ hermes_home }}/.claude/settings.json"
+    mode: "0644"

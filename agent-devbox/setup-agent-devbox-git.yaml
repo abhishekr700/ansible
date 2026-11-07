@@ -1,0 +1,56 @@
+# Git access for the agents (Hermes and Claude Code, both as the hermes user): option A, one GitLab deploy key.
+# The key can clone and push branches on the projects in terraform/gitlab, nothing else:
+# no API, no merge, and protected `main` (push: no one) rejects it. You open and merge the MRs.
+# It's a separate key from ~/.ssh/id_ed25519 so it can be revoked on its own.
+- name: Generate the GitLab deploy key
+  become: true
+  become_user: "{{ hermes_user }}"
+  community.crypto.openssh_keypair:
+    path: "{{ hermes_home }}/.ssh/{{ agent_git_key_name }}"
+    type: ed25519
+    comment: "{{ agent_git_key_comment }}"
+    mode: "0600"
+
+# Copy only the public half to the controller, where terraform/gitlab reads it.
+- name: Fetch the deploy key's public half for terraform/gitlab
+  become: true
+  ansible.builtin.fetch:
+    src: "{{ hermes_home }}/.ssh/{{ agent_git_key_name }}.pub"
+    dest: "{{ playbook_dir }}/../terraform/gitlab/agent-deploy-key.pub"
+    flat: true
+
+- name: Pin the gitlab.com host key
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.known_hosts:
+    path: "{{ hermes_home }}/.ssh/known_hosts"
+    name: gitlab.com
+    key: "{{ agent_git_gitlab_host_key }}"
+
+- name: Use the deploy key for gitlab.com only
+  become: true
+  become_user: "{{ hermes_user }}"
+  ansible.builtin.blockinfile:
+    path: "{{ hermes_home }}/.ssh/config"
+    create: true
+    mode: "0600"
+    marker: "# {mark} ANSIBLE MANAGED: gitlab deploy key"
+    block: |
+      Host gitlab.com
+        User git
+        IdentityFile ~/.ssh/{{ agent_git_key_name }}
+        IdentitiesOnly yes
+        StrictHostKeyChecking yes
+
+- name: Set the commit identity
+  become: true
+  become_user: "{{ hermes_user }}"
+  community.general.git_config:
+    scope: global
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+  loop:
+    - { name: user.name, value: "{{ agent_git_user_name }}" }
+    - { name: user.email, value: "{{ agent_git_user_email }}" }
+  environment:
+    HOME: "{{ hermes_home }}"
