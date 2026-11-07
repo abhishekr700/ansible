@@ -25,6 +25,7 @@ These are the live databases behind the user's apps. They hold **real people's d
 - Look first: `\dt`, `\d "Table"`. Prisma tables have quoted CamelCase names (`"Rating"`, `"userId"`).
 - Prefer aggregates. Use `LIMIT` on row queries. One-off `psql -c` or `-f` calls; don't leave sessions open.
 - Never point an app, Prisma, migrations or a test suite at these services.
+- A repo's own `.env` may point at production (foodies-app's does). Never use one you didn't create; build your own for Docker.
 
 ## Where the data may go
 - Your answer to the user: yes, summarised. Show emails only when the question needs them.
