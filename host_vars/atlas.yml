@@ -1,5 +1,12 @@
 ---
 atlas_project_folder: "/home/ubuntu/projects"
+atlas_containers_folder: "/opt/containers"
+
+# foodies-app: pinned image from GitLab CI. Upgrade = change the tag (main-<short sha>), never `latest`.
+foodies_app_image: "registry.gitlab.com/abhishekr700/foodies-app"
+foodies_app_image_tag: "main-f02f7f66"
+foodies_app_registry_user: "atlas-registry-pull"
+foodies_app_bind_address: "172.17.0.1"
 
 atlas_crons_folder: "/opt/crons"
 atlas_cron_logs_dir: "/var/log/crons"

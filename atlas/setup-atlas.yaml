@@ -29,3 +29,7 @@
 - name: Setup Fail2ban
   ansible.builtin.import_playbook: setup-atlas-fail2ban.yaml
   tags: fail2ban
+
+- name: Setup Foodies App
+  ansible.builtin.import_playbook: setup-foodies-app.yaml
+  tags: foodies-app

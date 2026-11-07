@@ -1,0 +1,27 @@
+# {{ ansible_managed }}
+# The image comes from foodies-app's GitLab CI (see docs/ci.md in that repo). Upgrade by changing
+# foodies_app_image_tag in host_vars/atlas.yml.
+name: foodies-app
+
+services:
+  app:
+    image: {{ foodies_app_image }}:{{ foodies_app_image_tag }}
+    container_name: foodies-app
+    restart: unless-stopped
+    ports:
+      # Only on the docker0 gateway: Pangolin's resource for remember.food targets 172.17.0.1:3000 through newt.
+      # 172.17.0.1 is Docker's default bridge address; if docker0 moves, update this and the Pangolin target.
+      # Docker bypasses ufw, so this bind is what keeps 3000 off the public interfaces.
+      - "{{ foodies_app_bind_address }}:3000:3000"
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - AUTH_TRUST_HOST=true
+    healthcheck:
+      # The image (node:20-slim) has no wget or curl, so use node's fetch.
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

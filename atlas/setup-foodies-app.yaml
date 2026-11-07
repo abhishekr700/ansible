@@ -1,0 +1,49 @@
+---
+- name: Setup Foodies App on Atlas
+  hosts: atlas
+  vars:
+    foodies_app_dest: "{{ atlas_containers_folder }}/foodies-app"
+  tasks:
+    - name: Ensure the parent containers directory exists
+      become: true
+      ansible.builtin.file:
+        path: "{{ atlas_containers_folder }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+    - name: Ensure the foodies-app directory exists
+      ansible.builtin.file:
+        path: "{{ foodies_app_dest }}"
+        state: directory
+        mode: "0755"
+
+    # Scoped deploy token (read_registry only). The secret stays in the gitignored env folder on the laptop.
+    # docker_login stores it base64-encoded in ~ubuntu/.docker/config.json on Atlas.
+    - name: Log in to the GitLab container registry
+      community.docker.docker_login:
+        registry_url: registry.gitlab.com
+        username: "{{ foodies_app_registry_user }}"
+        password: "{{ lookup('ansible.builtin.file', local_env_folder + '/foodies-app-registry-token') }}"
+      no_log: true
+
+    - name: Copy the .env.production file
+      ansible.builtin.copy:
+        src: "{{ local_env_folder }}/foodies-app.env.production"
+        dest: "{{ foodies_app_dest }}/.env.production"
+        owner: "ubuntu"
+        group: "ubuntu"
+        mode: "0600"
+
+    - name: Template the compose file
+      ansible.builtin.template:
+        src: templates/foodies-app/docker-compose.yml.j2
+        dest: "{{ foodies_app_dest }}/docker-compose.yml"
+        mode: "0644"
+
+    - name: Pull the pinned image and start Foodies App
+      community.docker.docker_compose_v2:
+        project_src: "{{ foodies_app_dest }}"
+        pull: missing
+        state: present

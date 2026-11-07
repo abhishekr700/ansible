@@ -76,3 +76,20 @@ The ansible side is **uncommitted** in the user's working tree. Don't discard it
 
 ## Status
 - 2026-11-08: written. Not started.
+- 2026-11-08: step 1 done (read-only). Pangolin resource `remember.food` (site `atlas`, newt) targets
+  `http://172.17.0.1:3000`, the docker0 gateway, so newt (on `newt_default`) reaches the app through the published
+  port. `foodies-app` is only on `foodies-app_default`. `https://remember.food/api/health` returns 200, so the app
+  works and only the healthcheck is broken. `127.0.0.1:3000` would cut newt off. Step 4 options: bind
+  `172.17.0.1:3000:3000` (no Pangolin change), or join `newt_default` with no `ports:` and retarget the resource to
+  `foodies-app:3000` in the Pangolin UI.
+- 2026-11-08: step 2 token created (via API with the user's `GITLAB_TOKEN`). Deploy token id 16966836, username
+  `atlas-registry-pull`, scope `read_registry` only, expires 2027-11-08. The secret is in
+  `{{ local_env_folder }}/foodies-app-registry-token` (token only, mode 0600). Checked: it can pull, and
+  `main-f02f7f66` has amd64 + arm64.
+- 2026-11-08: steps 3–7 done, with option 1 (`foodies_app_bind_address: 172.17.0.1`). Compose template:
+  `atlas/templates/foodies-app/docker-compose.yml.j2`, written over the old checkout's `docker-compose.yml`. Verified:
+  `main-f02f7f66` is healthy, `ss` shows 3000 only on 172.17.0.1, `https://remember.food/api/health` 200, public
+  `:3000` times out, second run `changed=0`.
+- 2026-11-08: step 8 done with the user's OK. `/opt/containers/foodies-app` now holds only `docker-compose.yml` and
+  `.env.production`; the `foodies-app-app` image is removed. Re-checked: healthy, public health 200, run `changed=0`.
+  Handoff complete. Optional follow-up: fix the healthcheck in the foodies-app repo's `docker-compose.yml` (GitLab MR).
