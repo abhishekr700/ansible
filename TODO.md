@@ -22,5 +22,9 @@ A second agent, separate from the dev agent on agent-devbox, for delegated homel
 - A log of every command it runs.
 - First decide whether Claude Code on the laptop, with you approving, is enough before building an always-on agent.
 
+## foodies-app on Atlas: deploy from the registry
+Pull the CI-built image (pinned `main-<sha>`) instead of building on the host, fix the healthcheck, and stop
+publishing port 3000 on all interfaces. Handoff: `atlas/HANDOFF-foodies-app.md`.
+
 ## Agent git access (in progress)
 GitLab deploy key for the dev agent: `terraform/gitlab/README.md`, Status section.
