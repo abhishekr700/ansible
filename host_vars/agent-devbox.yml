@@ -46,9 +46,9 @@ hermes_home: /home/hermes
 hermes_install_script_url: https://hermes-agent.nousresearch.com/install.sh
 # Headless VM: no computer-use driver. Browser tools stay.
 hermes_install_args: "--non-interactive --skip-computer-use"
-# Leave false until you've run `hermes setup` and the Telegram config as the hermes user.
+# On: `hermes setup` and Telegram are configured (2026-11-07). Starts at boot via linger.
 # Then set true and rerun with --tags hermes to enable and start the gateway.
-hermes_gateway_enabled: false
+hermes_gateway_enabled: true
 
 # --- Claude Code (runs as the hermes user; sign in manually with `claude`) ---
 claude_install_script_url: https://claude.ai/install.sh
