@@ -65,11 +65,30 @@ agent_git_user_email: "hermes@agent-devbox.invalid"
 agent_git_coauthor: "Abhishek Ranjan <abhishekr700@gmail.com>"
 agent_git_owner: abhishekr700
 # Context for the homelab-repos skill (templates/homelab-repos-SKILL.md.j2). Keep in step with terraform/gitlab var.repos.
+# `ships`: how main gets built and deployed after a merge (rendered into the skill's "How each repo is built" list).
 agent_git_repos:
-  - { name: expenseTracker, what: "Self-hosted expense tracker web app", stack: "Node.js, Express, Sequelize, MariaDB; Docker image built on GitHub Actions" }
-  - { name: email-filter-script, what: "Gmail filtering rules; sends bank transaction emails to the expense server", stack: "Node.js" }
-  - { name: expense-splitwise-bridge, what: "Job that imports Splitwise group expenses into expenseTracker (public repo)", stack: "Node.js, Docker" }
-  - { name: foodies-app, what: "Shared dining tracker for couples to rate dishes", stack: "Next.js 14, Prisma, PostgreSQL" }
+  - name: expenseTracker
+    what: "Self-hosted expense tracker web app"
+    stack: "Node.js, Express, Sequelize, MariaDB"
+    ships: >-
+      GitHub Actions on the mirrored `main` runs the API and UI tests, then builds a Docker image to GHCR.
+      The user's Ansible deploys it. Locally: `npm test`, and in `web/` the typecheck and Playwright smoke tests.
+  - name: email-filter-script
+    what: "Gmail filtering rules; sends bank transaction emails to the expense server"
+    stack: "Node.js"
+    ships: "No CI. The user deploys `main` with Ansible."
+  - name: expense-splitwise-bridge
+    what: "Job that imports Splitwise group expenses into expenseTracker (public repo)"
+    stack: "Node.js, Docker"
+    ships: "No CI. The user's Ansible clones `main` from GitHub and builds it on the host."
+  - name: foodies-app
+    what: "Shared dining tracker for couples to rate dishes"
+    stack: "Next.js 16, Prisma, PostgreSQL"
+    ships: >-
+      GitLab CI (`.gitlab-ci.yml`, explained in `docs/ci.md`) on each merge to `main`: integration tests, then
+      native amd64 and arm64 builds, published as one image to `registry.gitlab.com/abhishekr700/foodies-app`
+      tagged `latest`, `main` and `main-<sha>`. It runs on the user's server Atlas (arm64); the deploy is the user's.
+      Locally: `npx vitest run tests/integration/` (a bare `vitest run` also picks up the Playwright specs and fails).
 
 # --- Agent context: always-loaded rules + on-demand skills ---
 # Skills live in a root-owned dir: Hermes reads it via skills.external_dirs, Claude Code via a symlink.

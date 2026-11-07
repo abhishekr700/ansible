@@ -1,7 +1,7 @@
 ---
 name: homelab-repos
 description: "How the user's code repos are hosted and how to work on them: GitLab remotes, agent/* branches, merge requests, the mirror to GitHub, testing. Load before cloning, committing or pushing to any of the user's repos."
-version: 1.0.0
+version: 1.1.0
 ---
 <!-- Managed by Ansible (agent-devbox/templates/homelab-repos-SKILL.md.j2). Local edits are overwritten. -->
 # The user's repos and how to work on them
@@ -9,7 +9,7 @@ version: 1.0.0
 ## Where the code lives
 - **GitLab is the source of truth:** `git@gitlab.com:{{ agent_git_owner }}/<repo>.git`. Use only this as a remote.
 - **GitHub (`{{ agent_git_owner }}/<repo>`) is a read-only copy.** GitLab pushes `main` there after the user merges,
-  and deploys build from GitHub. Never add GitHub as a remote or push there.
+  and some builds and deploys still read from it. Never add GitHub as a remote or push there.
 - **Your access:** the SSH key `~/.ssh/{{ agent_git_key_name }}` is a GitLab deploy key. It can clone and push branches.
   It has no API: no `glab`, no issues, no MR comments, no merging. `main` is protected; a rejected push to it is expected.
 
@@ -34,9 +34,20 @@ Anything else, including the user's `ansible` homelab repo, is out of reach on p
 5. Review: you can't read MR comments, so the user relays feedback. Push fixes to the same branch.
    Don't force-push a branch the user has reviewed. Don't delete branches you didn't create.
 
-## After merge
-Merging is the user's call and it ships: `main` mirrors to GitHub, which is what the homelab deploys from
-(expenseTracker's image is built by GitHub Actions). Nothing you push to a branch deploys anywhere.
+## How each repo is built and shipped
+Merging is the user's call and it ships. Nothing you push to a branch builds or deploys anywhere.
+
+{% for r in agent_git_repos %}
+- **`{{ r.name }}`:** {{ r.ships }}
+{% endfor %}
+
+CI rules:
+- Pipelines and workflows run only on `main`, after the user merges. Your branches don't start them, so run the
+  same checks yourself in the VM and report the result.
+- Don't touch CI config (`.gitlab-ci.yml`, `.github/workflows/`) unless the task is about CI. Never make branch
+  pushes start pipelines: they'd spend the user's limited CI minutes and run with the user's rights. If you change
+  CI, say so at the top of the MR.
+- To check a CI change before merge, ask the user to start a pipeline on your branch (it builds without pushing).
 
 ## Testing
 - Run tests and the app inside this VM (Docker is available). Say what you ran and what passed.
