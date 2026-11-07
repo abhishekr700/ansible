@@ -1,6 +1,8 @@
 ---
 - name: Setup Mac
   hosts: macbook-local
+  vars:
+    zshrc_path: ~/.zshrc
 
   roles:
     - git-setup
@@ -14,16 +16,10 @@
       import_tasks: mac_install_applications.yaml
     - name: Install Ansible
       import_tasks: mac_setup_ansible.yaml
-    - name: Add a line to .zshrc if it does not exist
-      lineinfile:
-        path: ~/.zshrc
-        line: 'eval "$(zoxide init --cmd cd zsh)"'
-        state: present
-        mode: "0644"
-        create: true
-    - name: Insert/Update "Match User" configuration block in /etc/ssh/sshd_config prepending and appending a new line
+    - name: Configure zsh history in .zshrc
+      tags: zshrc
       ansible.builtin.blockinfile:
-        path: ~/.zshrc
+        path: "{{ zshrc_path }}"
         append_newline: true
         prepend_newline: true
         block: |
@@ -40,9 +36,18 @@
           # Thus, multiple parallel zsh sessions will all have the new entries from their history
           # lists added to the history file, in the order that they exit.
           setopt APPEND_HISTORY        # Append history instead of overwriting
+    # oh-my-zsh must be sourced once, from this block. A second, earlier source
+    # (from the stock template) makes compinit rebuild its dump on every start.
+    - name: Remove the stock oh-my-zsh source line (sourced in the plugins block)
+      tags: zshrc
+      ansible.builtin.lineinfile:
+        path: "{{ zshrc_path }}"
+        regexp: '^source \$ZSH/oh-my-zsh\.sh$'
+        state: absent
     - name: Enable oh-my-zsh plugins
+      tags: zshrc
       ansible.builtin.blockinfile:
-        path: ~/.zshrc
+        path: "{{ zshrc_path }}"
         append_newline: true
         prepend_newline: true
         marker: "# {mark} ANSIBLE MANAGED BLOCK FOR OH-MY-ZSH PLUGINS"
@@ -59,11 +64,46 @@
           )
           source $ZSH/oh-my-zsh.sh # Must be sourced after the plugins list
     - name: Useful Aliases for Macbook
+      tags: zshrc
       ansible.builtin.blockinfile:
-        path: ~/.zshrc
+        path: "{{ zshrc_path }}"
         append_newline: true
         prepend_newline: true
         marker: "# {mark} ANSIBLE MANAGED BLOCK FOR aliases"
         block: |
           alias flushDnsCache="sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder; echo DNS Cache Cleared!"
-          alias ls=ls -alh
+          alias ls="ls -alh"
+    # Hand-added init lines, moved into the shell-init block below.
+    - name: Remove unmanaged shell init lines from .zshrc
+      tags: zshrc
+      ansible.builtin.lineinfile:
+        path: "{{ zshrc_path }}"
+        regexp: "{{ item }}"
+        state: absent
+      loop:
+        - '^eval \$\(thefuck --alias\)$'
+        - '^eval "\$\(zoxide init --cmd cd zsh\)"$'
+        - '^autoload -U promptinit; promptinit$'
+        - '^prompt pure$'
+    - name: Collapse repeated Antigravity PATH lines in .zshrc
+      tags: zshrc
+      ansible.builtin.replace:
+        path: "{{ zshrc_path }}"
+        regexp: '(# Added by Antigravity\nexport PATH="[^"]*/\.antigravity/antigravity/bin:\$PATH"\n)(\n?\1)+'
+        replace: '\1'
+    # zoxide warns unless it is initialised after everything that touches its
+    # hooks (oh-my-zsh), so this block goes at the end of the file.
+    - name: Shell init (prompt, thefuck, zoxide) at the end of .zshrc
+      tags: zshrc
+      ansible.builtin.blockinfile:
+        path: "{{ zshrc_path }}"
+        append_newline: true
+        prepend_newline: true
+        insertafter: EOF
+        marker: "# {mark} ANSIBLE MANAGED BLOCK FOR SHELL INIT (keep last)"
+        block: |
+          autoload -U promptinit && promptinit
+          prompt pure  # theme
+          # thefuck starts Python (~0.5s), so load it on first use
+          fuck() { unfunction fuck; eval "$(thefuck --alias)"; fuck "$@"; }
+          eval "$(zoxide init --cmd cd zsh)"  # must stay last
