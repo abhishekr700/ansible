@@ -1,0 +1,32 @@
+# {{ ansible_managed }}
+# What's Up Docker: auto-deploys foodies-app when its GitLab CI publishes a new build of `main` (digest watch).
+# Only containers labelled wud.watch=true are watched (foodies-app only). Design: atlas/HANDOFF-wud-foodies.md.
+name: wud
+
+services:
+  wud:
+    # Pinned by version and digest so WUD never updates itself. Bump both in host_vars/atlas.yml.
+    image: getwud/wud:{{ wud_version }}@{{ wud_image_digest }}
+    container_name: wud
+    restart: unless-stopped
+    ports:
+      # docker0 gateway only, like foodies-app: Pangolin's newt reaches the UI here. Docker bypasses ufw.
+      - "{{ wud_bind_address }}:{{ wud_port }}:3000"
+    env_file:
+      # Secrets (admin login, session secret, Telegram), copied from local_env_folder/wud-atlas.env.
+      - wud.env
+    environment:
+      - TZ=Asia/Kolkata
+      - WUD_WATCHER_LOCAL_CRON={{ wud_watch_cron }}
+      - WUD_WATCHER_LOCAL_WATCHBYDEFAULT=false
+      # GitLab registry: the read_registry deploy token Atlas already pulls with. Token is in wud.env.
+      - WUD_REGISTRY_GITLAB_FOODIES_USERNAME={{ foodies_app_registry_user }}
+      # Pulls the new digest and recreates the container with the same config via the Docker API (no file edits).
+      # ROLLBACK restores the old container if the new one turns unhealthy (foodies-app has a healthcheck).
+      - WUD_TRIGGER_DOCKER_FOODIES_PRUNE=true
+      - WUD_TRIGGER_DOCKER_FOODIES_ROLLBACK=true
+      - WUD_TRIGGER_TELEGRAM_TG_EVENTS=available,success,failure,rollback
+    volumes:
+      # Read-write: the trigger creates and removes containers. This is root-equivalent on Atlas.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./store:/store

@@ -42,7 +42,9 @@
         dest: "{{ foodies_app_dest }}/docker-compose.yml"
         mode: "0644"
 
-    - name: Pull the pinned image and start Foodies App
+    # The tag floats (`main`), and WUD (setup-wud.yaml) pulls each new digest and recreates the container.
+    # `pull: missing` never pulls an older image over it, so this play and WUD don't fight.
+    - name: Pull the image and start Foodies App
       community.docker.docker_compose_v2:
         project_src: "{{ foodies_app_dest }}"
         pull: missing

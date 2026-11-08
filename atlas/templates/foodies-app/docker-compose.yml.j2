@@ -1,6 +1,6 @@
 # {{ ansible_managed }}
-# The image comes from foodies-app's GitLab CI (see docs/ci.md in that repo). Upgrade by changing
-# foodies_app_image_tag in host_vars/atlas.yml.
+# The image comes from foodies-app's GitLab CI (see docs/ci.md in that repo). The tag floats (`main`): WUD
+# (atlas/setup-wud.yaml) watches its digest and recreates this container on each new build. WUD never edits this file.
 name: foodies-app
 
 services:
@@ -8,6 +8,10 @@ services:
     image: {{ foodies_app_image }}:{{ foodies_app_image_tag }}
     container_name: foodies-app
     restart: unless-stopped
+    labels:
+      - wud.watch=true
+      - wud.watch.digest=true
+      - wud.trigger.include=docker.foodies,telegram.tg
     ports:
       # Only on the docker0 gateway: Pangolin's resource for remember.food targets 172.17.0.1:3000 through newt.
       # 172.17.0.1 is Docker's default bridge address; if docker0 moves, update this and the Pangolin target.

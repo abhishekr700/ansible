@@ -1,0 +1,66 @@
+---
+# What's Up Docker on Atlas: watches foodies-app's `main` digest in the GitLab registry and redeploys it.
+# Secrets come from {{ local_env_folder }}/wud-atlas.env and foodies-app-registry-token (never in the repo).
+# Reached via Pangolin (172.17.0.1:3009) and on the tailnet at http://atlas:3009 (tailscale serve).
+- name: Setup WUD on Atlas
+  hosts: atlas
+  vars:
+    wud_dest: "{{ atlas_containers_folder }}/wud"
+  tasks:
+    - name: Ensure the WUD directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ wud_dest }}"
+        - "{{ wud_dest }}/store"
+
+    - name: Write WUD's env file (secrets)
+      ansible.builtin.copy:
+        content: |
+          {{ lookup('ansible.builtin.file', local_env_folder + '/wud-atlas.env') }}
+          WUD_REGISTRY_GITLAB_FOODIES_TOKEN={{ lookup('ansible.builtin.file', local_env_folder + '/foodies-app-registry-token') }}
+        dest: "{{ wud_dest }}/wud.env"
+        mode: "0600"
+      no_log: true
+      diff: false
+      register: wud_env
+
+    - name: Template WUD's compose file
+      ansible.builtin.template:
+        src: templates/wud/docker-compose.yml.j2
+        dest: "{{ wud_dest }}/docker-compose.yml"
+        mode: "0644"
+      register: wud_compose
+
+    - name: Start WUD
+      community.docker.docker_compose_v2:
+        project_src: "{{ wud_dest }}"
+        pull: missing
+        state: present
+        # env_file changes don't change compose's config hash, so force a recreate when the secrets change.
+        recreate: "{{ 'always' if wud_env.changed else 'auto' }}"
+      # On the first --check run the project folder doesn't exist yet, so this can't be simulated.
+      ignore_errors: "{{ ansible_check_mode }}"
+
+    # Tailnet access: http://atlas:{{ wud_port }}. tailscale serve proxies tailnet traffic to the docker0 bind, so
+    # Docker never binds the Tailscale IP (that bind can fail at boot if Docker starts before tailscaled).
+    # Plain HTTP is fine inside the tailnet (WireGuard-encrypted). The config persists across reboots.
+    - name: Read Tailscale serve config
+      become: true
+      ansible.builtin.command: tailscale serve status --json
+      register: wud_serve_status
+      changed_when: false
+      check_mode: false
+
+    - name: Serve WUD on the tailnet
+      become: true
+      ansible.builtin.command: >-
+        tailscale serve --bg --yes --http={{ wud_port }} http://{{ wud_bind_address }}:{{ wud_port }}
+      when: >-
+        (wud_serve_status.stdout | from_json).TCP | default({}) | dict2items
+        | selectattr('key', 'equalto', wud_port | string) | selectattr('value.HTTP', 'defined')
+        | list | length == 0
+        or ('http://' + wud_bind_address + ':' + (wud_port | string)) not in wud_serve_status.stdout
+      changed_when: true

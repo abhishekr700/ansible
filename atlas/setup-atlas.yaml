@@ -33,3 +33,7 @@
 - name: Setup Foodies App
   ansible.builtin.import_playbook: setup-foodies-app.yaml
   tags: foodies-app
+
+- name: Setup WUD (auto-deploys foodies-app)
+  ansible.builtin.import_playbook: setup-wud.yaml
+  tags: wud
