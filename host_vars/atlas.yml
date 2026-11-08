@@ -2,11 +2,20 @@
 atlas_project_folder: "/home/ubuntu/projects"
 atlas_containers_folder: "/opt/containers"
 
-# foodies-app: pinned image from GitLab CI. Upgrade = change the tag (main-<short sha>), never `latest`.
+# foodies-app: image from GitLab CI. `main` floats; WUD deploys each new build of it (digest watch).
+# Rollback: set a `main-<short sha>` here and run the foodies-app tag (WUD ignores it: no digest changes on a sha
+# tag). Set it back to `main` once a fixed build is out.
 foodies_app_image: "registry.gitlab.com/abhishekr700/foodies-app"
-foodies_app_image_tag: "main-f02f7f66"
+foodies_app_image_tag: "main"
 foodies_app_registry_user: "atlas-registry-pull"
 foodies_app_bind_address: "172.17.0.1"
+
+# WUD (What's Up Docker): watches foodies-app only. UI: Pangolin -> 172.17.0.1:3009, tailnet -> http://atlas:3009.
+wud_version: "9.8.0"
+wud_image_digest: "sha256:5a45a94c2c3e9c26e052c62bbc5bef9f945e3f7826dc446b5c71586a1238ed40"
+wud_bind_address: "172.17.0.1"
+wud_port: 3009
+wud_watch_cron: "*/5 * * * *"
 
 atlas_crons_folder: "/opt/crons"
 atlas_cron_logs_dir: "/var/log/crons"
