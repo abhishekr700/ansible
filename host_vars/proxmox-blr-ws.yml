@@ -11,3 +11,7 @@ proxmox_blr_ws_backup_sync_gdrive_cron_log_dir: "backup_sync"
 debian13_image_name: debian-13-genericcloud-amd64-20261021-2638.qcow2
 debian13_image_url: "https://cloud.debian.org/images/cloud/trixie/20261021-2638/debian-13-genericcloud-amd64-20261021-2638.qcow2"
 debian13_image_sha512: 16e0965312c56feb331049d45d2b1b5778f3f942a33d4300eedbb97527707f2bea87c0006f3e4cc7a25fadbff739c4e235a51fb9bcd1b66fd554f7f8e80ba45c
+
+# backup-run (/usr/local/bin/backup-run) pushes backup metrics to the Pushgateway on atlas over the tailnet.
+# Use the MagicDNS name: atlas's tailscale serve routes by Host, so the bare Tailscale IP gets a 404.
+backup_run_pushgateway_url: "http://atlas.taila8099.ts.net:9091"

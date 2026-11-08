@@ -1,0 +1,146 @@
+#!/bin/bash
+# Managed by Ansible (proxmox-blr-ws/setup-proxmox-blr-ws-crons.yaml). Source: proxmox-blr-ws/files/backup-run.
+#
+# backup-run: run a backup script and push its status to the Pushgateway on atlas.
+# Metrics contract: job=homelab_backup, grouping key /metrics/job/homelab_backup/host/<host>/backup/<backup>,
+# every push is a POST (it replaces only the metric names it sends).
+#
+# Usage:
+#   backup-run --backup NAME --kind borg|rclone --target TARGET --interval SECONDS -- COMMAND [ARGS...]
+#
+# Rules this script keeps, so it can never make a backup fail or behave differently:
+#   - no `set -e`, `set -u` or traps: nothing here can stop COMMAND from running;
+#   - COMMAND's stdout/stderr go to the same place as before (the cron line's tee + systemd-cat);
+#   - pushes use short curl timeouts; a failed push is logged and ignored;
+#   - the exit code is COMMAND's own exit code.
+#
+# Config: /etc/backup-run.conf (BACKUP_RUN_CONF overrides the path). Environment variables win over the file:
+#   BACKUP_RUN_PUSHGATEWAY_URL  e.g. http://atlas.example.ts.net:9091 (empty: run without pushing)
+#   BACKUP_RUN_HOST             the `host` label (default: short hostname)
+
+log() { printf '[backup-run] %s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >&2; }
+
+conf="${BACKUP_RUN_CONF:-/etc/backup-run.conf}"
+if [ -r "$conf" ]; then
+    # shellcheck source=/dev/null
+    . "$conf"
+fi
+
+backup="" kind="" target="" interval=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --backup) backup="$2"; shift 2 ;;
+        --kind) kind="$2"; shift 2 ;;
+        --target) target="$2"; shift 2 ;;
+        --interval) interval="$2"; shift 2 ;;
+        --) shift; break ;;
+        *) break ;;
+    esac
+done
+
+if [ $# -eq 0 ]; then
+    log "ERROR: no command given. Usage: backup-run --backup NAME --kind K --target T --interval S -- COMMAND"
+    exit 64
+fi
+
+# Label values and URL path segments: keep them to a safe character set.
+clean() { printf '%s' "$1" | tr -c 'A-Za-z0-9_.-' '_'; }
+host="$(clean "${BACKUP_RUN_HOST:-$(hostname -s 2>/dev/null)}")"
+backup="$(clean "$backup")"
+kind="$(clean "$kind")"
+target="$(clean "$target")"
+case "$interval" in '' | *[!0-9]*) interval="" ;; esac
+
+url="${BACKUP_RUN_PUSHGATEWAY_URL:-}"
+if [ -z "$url" ] || [ -z "$backup" ] || [ -z "$host" ]; then
+    log "WARNING: metrics disabled (pushgateway URL, --backup or host missing); running the command only"
+    url=""
+fi
+push_url="${url%/}/metrics/job/homelab_backup/host/${host}/backup/${backup}"
+labels="kind=\"${kind}\",target=\"${target}\""
+
+# gauge NAME VALUE: one sample in the text exposition format.
+gauge() { printf '# TYPE %s gauge\n%s{%s} %s\n' "$1" "$1" "$labels" "$2"; }
+
+# push PHASE: POST the body on stdin. Never fails the caller.
+push() {
+    [ -n "$url" ] || return 0
+    local phase="$1" body out code
+    body="$(cat)"
+    out="$(printf '%s\n' "$body" | curl -sS -X POST --data-binary @- \
+        -H 'Content-Type: text/plain; version=0.0.4' \
+        --connect-timeout 5 --max-time 10 --retry 1 --retry-delay 2 \
+        -o /dev/null -w '%{http_code}' "$push_url" 2>&1)"
+    code="${out: -3}"
+    case "$code" in
+        2??) log "pushed $phase metrics for $backup" ;;
+        *) log "WARNING: failed to push $phase metrics for $backup (ignored): ${out//$'\n'/ }" ;;
+    esac
+    return 0
+}
+
+# borg_bytes "278.25 GB" -> bytes. borg 1.x prints decimal units (kB, MB, ...); IEC (KiB, ...) is handled too.
+borg_bytes() {
+    awk -v n="$1" -v u="$2" 'BEGIN {
+        split("B kB MB GB TB PB EB", d, " "); split("B KiB MiB GiB TiB PiB EiB", b, " ")
+        for (i = 1; i <= 7; i++) { if (u == d[i]) m = 1000 ^ (i - 1); if (u == b[i]) m = 1024 ^ (i - 1) }
+        if (u == "KB") m = 1000
+        if (m == "" || n !~ /^[0-9.]+$/) exit 1
+        printf "%.0f\n", n * m }'
+}
+
+start="$(date +%s)"
+{
+    gauge backup_running 1
+    gauge backup_last_start_timestamp_seconds "$start"
+    [ -n "$interval" ] && gauge backup_expected_interval_seconds "$interval"
+} | push start
+
+capture=""
+if [ "$kind" = "borg" ] && [ -n "$url" ]; then
+    capture="$(mktemp "${TMPDIR:-/tmp}/backup-run.XXXXXX" 2>/dev/null)"
+fi
+
+if [ -n "$capture" ]; then
+    # Same merge the cron line already does (2>&1). A tee write error to the capture file doesn't stop the
+    # output to stdout (GNU tee keeps writing to the other outputs).
+    "$@" 2>&1 | tee -a "$capture"
+    rc="${PIPESTATUS[0]}"
+else
+    "$@"
+    rc=$?
+fi
+
+end="$(date +%s)"
+ok=0
+if [ "$rc" -eq 0 ] || { [ "$kind" = "borg" ] && [ "$rc" -eq 1 ]; }; then ok=1; fi
+
+stats=""
+if [ -n "$capture" ]; then
+    # The last "This archive:" / "All archives:" lines of `borg create --stats` (this run's output only).
+    this="$(grep -E '^This archive: +[0-9.]+ [A-Za-z]+ +[0-9.]+ [A-Za-z]+ +[0-9.]+ [A-Za-z]+ *$' "$capture" | tail -n 1)"
+    all="$(grep -E '^All archives: +[0-9.]+ [A-Za-z]+ +[0-9.]+ [A-Za-z]+ +[0-9.]+ [A-Za-z]+ *$' "$capture" | tail -n 1)"
+    if [ -n "$this" ]; then
+        set -- $this   # This archive: N U N U N U
+        orig="$(borg_bytes "$3" "$4")" && stats+="$(gauge backup_borg_original_bytes "$orig")"$'\n'
+        dedup="$(borg_bytes "$7" "$8")" && stats+="$(gauge backup_borg_deduplicated_bytes "$dedup")"$'\n'
+    fi
+    if [ -n "$all" ]; then
+        set -- $all    # All archives: N U N U N U
+        uniq="$(borg_bytes "$7" "$8")" && stats+="$(gauge backup_borg_repo_unique_bytes "$uniq")"$'\n'
+    fi
+    [ -z "$stats" ] && log "no borg --stats found in the output; size metrics not pushed"
+    rm -f "$capture"
+fi
+
+{
+    gauge backup_running 0
+    gauge backup_last_end_timestamp_seconds "$end"
+    gauge backup_last_exit_code "$rc"
+    gauge backup_last_duration_seconds "$((end - start))"
+    [ -n "$interval" ] && gauge backup_expected_interval_seconds "$interval"
+    [ "$ok" -eq 1 ] && gauge backup_last_success_timestamp_seconds "$end"
+    printf '%s' "$stats"
+} | push end
+
+exit "$rc"

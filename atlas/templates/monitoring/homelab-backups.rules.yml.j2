@@ -1,0 +1,47 @@
+# {{ ansible_managed }}
+# Backup status per the backup metrics contract v1 (pushed by backup-run on each backup host).
+# homelab:backup_status: 0 = green, 1 = yellow, 2 = red. Labels: job, host, backup, kind, target.
+# Expected backups (red when they have no data at all): monitoring_expected_backups in host_vars/atlas.yml.
+groups:
+  # Slow-moving input: the typical run time, for the "running too long" check.
+  - name: homelab-backups-typical
+    interval: 5m
+    rules:
+      - record: homelab:backup_typical_duration_seconds
+        expr: quantile_over_time(0.5, backup_last_duration_seconds{job="homelab_backup"}[7d])
+
+  - name: homelab-backups
+    rules:
+      - record: homelab:backup_success_age_seconds
+        expr: time() - backup_last_success_timestamp_seconds{job="homelab_backup"}
+
+      # `a or b` keeps a's series and adds only b's series whose labels aren't in a yet, so the first matching
+      # term wins: red terms first, then yellow, then the green default. Each term ends in `* 0 + N` to drop
+      # the metric name, so all terms share one label set per backup.
+      - record: homelab:backup_status
+        expr: |
+          # red: last run failed (borg: rc >= 2 is an error, rc 1 a warning; others: any non-zero rc)
+              (backup_last_exit_code{job="homelab_backup", kind="borg"} >= 2) * 0 + 2
+          or  (backup_last_exit_code{job="homelab_backup", kind!="borg"} != 0) * 0 + 2
+          # red: no success for more than 3 intervals
+          or  (homelab:backup_success_age_seconds > 3 * backup_expected_interval_seconds) * 0 + 2
+          # red: the backup reports but has never succeeded
+          or  (backup_expected_interval_seconds{job="homelab_backup"}
+                 unless on (job, host, backup) backup_last_success_timestamp_seconds) * 0 + 2
+{% for b in monitoring_expected_backups %}
+          # red: no data at all for {{ b.host }}/{{ b.backup }}
+          or  absent(backup_last_success_timestamp_seconds{job="homelab_backup", host="{{ b.host }}", backup="{{ b.backup }}", kind="{{ b.kind }}", target="{{ b.target }}"}) * 2
+{% endfor %}
+          # yellow: no success for more than 1.5 intervals
+          or  (homelab:backup_success_age_seconds > 1.5 * backup_expected_interval_seconds) * 0 + 1
+          # yellow: borg finished with warnings
+          or  (backup_last_exit_code{job="homelab_backup", kind="borg"} == 1) * 0 + 1
+          # yellow: running for longer than 2x the typical run plus 15 min (the floor keeps short jobs, e.g. a 25 s
+          # sync, from going yellow on a small delay)
+          or  (
+                (backup_running{job="homelab_backup"} == 1)
+                and on (job, host, backup)
+                (time() - backup_last_start_timestamp_seconds > 2 * homelab:backup_typical_duration_seconds + 900)
+              ) * 0 + 1
+          # green
+          or  backup_expected_interval_seconds{job="homelab_backup"} * 0

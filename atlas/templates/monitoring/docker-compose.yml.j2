@@ -1,0 +1,65 @@
+# {{ ansible_managed }}
+# Homelab monitoring on atlas (v1: backup metrics). Deployed by atlas/setup-monitoring.yaml.
+#
+# Exposure: atlas is a public VPS and Docker bypasses ufw, so every port binds to {{ monitoring_bind_address }} only.
+# Tailnet access goes through `tailscale serve` (like WUD), which proxies to these loopback binds:
+#   Pushgateway http://{{ atlas_tailnet_fqdn }}:{{ pushgateway_port }}  (backup hosts push here)
+#   Grafana     http://{{ atlas_tailnet_fqdn }}:{{ grafana_port }}
+# Prometheus is not served on the tailnet; reach it with `ssh -L {{ prometheus_port }}:127.0.0.1:{{ prometheus_port }} atlas`.
+# To publish Grafana through Pangolin later, bind it to 172.17.0.1 (newt reaches apps there), not 0.0.0.0.
+name: monitoring
+
+services:
+  prometheus:
+    image: prom/prometheus:{{ prometheus_version }}@{{ prometheus_image_digest }}
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time={{ prometheus_retention }}
+    ports:
+      - "{{ monitoring_bind_address }}:{{ prometheus_port }}:9090"
+    volumes:
+      - ./config/prometheus:/etc/prometheus:ro
+      # All of Prometheus's data is in this one directory: copy it to move the history to another host.
+      - ./data/prometheus:/prometheus
+
+  pushgateway:
+    image: prom/pushgateway:{{ pushgateway_version }}@{{ pushgateway_image_digest }}
+    container_name: pushgateway
+    restart: unless-stopped
+    command:
+      # Keep pushed metrics across restarts, or a restart would read as "never backed up" (red).
+      - --persistence.file=/data/pushgateway.db
+      - --persistence.interval=1m
+    ports:
+      - "{{ monitoring_bind_address }}:{{ pushgateway_port }}:9091"
+    volumes:
+      - ./data/pushgateway:/data
+
+  grafana:
+    image: grafana/grafana:{{ grafana_version }}@{{ grafana_image_digest }}
+    container_name: grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "{{ monitoring_bind_address }}:{{ grafana_port }}:3000"
+    env_file:
+      # GF_SECURITY_ADMIN_PASSWORD, from local_env_folder/grafana-atlas-admin-password (never in the repo).
+      # Grafana reads it only when it first creates its DB; later changes need `grafana cli admin reset-admin-password`.
+      - grafana.env
+    environment:
+      - GF_SERVER_ROOT_URL=http://{{ atlas_tailnet_fqdn }}:{{ grafana_port }}/
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
+      - GF_NEWS_NEWS_FEED_ENABLED=false
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config/grafana/dashboards:/etc/grafana/dashboards:ro
+      - ./data/grafana:/var/lib/grafana

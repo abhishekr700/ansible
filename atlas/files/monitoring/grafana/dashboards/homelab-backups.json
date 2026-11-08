@@ -1,0 +1,2005 @@
+{
+  "uid": "homelab-backups",
+  "title": "Homelab backups",
+  "description": "Backup jobs pushed to the Pushgateway by the backup-run wrapper. Status follows the homelab:backup_status rule.",
+  "tags": [
+    "homelab",
+    "backups"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "1m",
+  "liveNow": false,
+  "fiscalYearStartMonth": 0,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "1h"
+    ]
+  },
+  "links": [],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "name": "Failed runs",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "red",
+        "expr": "max by (backup) (\n  (backup_last_exit_code{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\", kind=\"borg\"} >= 2)\n  or (backup_last_exit_code{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\", kind!=\"borg\"} != 0)\n)",
+        "step": "60s",
+        "titleFormat": "{{backup}} failed",
+        "textFormat": "Last run exited with an error",
+        "useValueForTime": false,
+        "tagKeys": "backup"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "label": "Host",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(backup_expected_interval_seconds{job=\"homelab_backup\"}, host)",
+          "refId": "host-var"
+        },
+        "definition": "label_values(backup_expected_interval_seconds{job=\"homelab_backup\"}, host)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      },
+      {
+        "name": "backup",
+        "label": "Backup",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(backup_expected_interval_seconds{job=\"homelab_backup\", host=~\"$host\"}, backup)",
+          "refId": "backup-var"
+        },
+        "definition": "label_values(backup_expected_interval_seconds{job=\"homelab_backup\", host=~\"$host\"}, backup)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "regex": "",
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "$backup",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [],
+      "repeat": "backup"
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Status",
+      "description": "Overall state from the `homelab:backup_status` recording rule.\n\n- **OK**: last run succeeded and it is on schedule.\n- **WARNING**: last success older than 1.5x the interval, borg exit code 1, or a run taking more than 2x its typical time.\n- **FAILED**: last exit code is an error, last success older than 3x the interval, or no success recorded.\n- **RUNNING**: a run is in progress and nothing else is wrong.\n- **NO DATA**: no status for this backup (rule missing or series gone). Treat as failed.\n\nSubtitle: host, kind and target.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "((\n  max by (host, backup) (homelab:backup_status{host=~\"$host\", backup=~\"$backup\"})\n  + on (host, backup)\n  3 * (max by (host, backup) (backup_running{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"}) == bool 1)\n    * on (host, backup) (max by (host, backup) (homelab:backup_status{host=~\"$host\", backup=~\"$backup\"}) == bool 0)\n)\nor\nmax by (host, backup) (homelab:backup_status{host=~\"$host\", backup=~\"$backup\"}))\n* on (host, backup) group_left (kind, target)\n(0 * max by (host, backup, kind, target) (backup_expected_interval_seconds{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"}) + 1)\nor on (host, backup)\n((\n  max by (host, backup) (homelab:backup_status{host=~\"$host\", backup=~\"$backup\"})\n  + on (host, backup)\n  3 * (max by (host, backup) (backup_running{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"}) == bool 1)\n    * on (host, backup) (max by (host, backup) (homelab:backup_status{host=~\"$host\", backup=~\"$backup\"}) == bool 0)\n)\nor\nmax by (host, backup) (homelab:backup_status{host=~\"$host\", backup=~\"$backup\"}))",
+          "legendFormat": "{{host}} · {{kind}} → {{target}}",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OK",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "WARNING",
+                  "color": "yellow",
+                  "index": 1
+                },
+                "2": {
+                  "text": "FAILED",
+                  "color": "red",
+                  "index": 2
+                },
+                "3": {
+                  "text": "RUNNING",
+                  "color": "blue",
+                  "index": 3
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "NO DATA",
+                  "color": "red",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "noValue": "NO DATA"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "text": {
+          "titleSize": 13,
+          "valueSize": 40
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Last success",
+      "description": "When the last successful run ended (exit code 0, or 0/1 for borg). From `backup_last_success_timestamp_seconds`. Survives failed runs, so a failure shows here as this getting old.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 4,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "max(backup_last_success_timestamp_seconds{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"}) * 1000",
+          "legendFormat": "__auto",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeFromNow",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5a6171",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "noValue": "never"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Next run due",
+      "description": "Last start + expected interval. If this reads \"… ago\", the next run is late (cron didn't fire, or the host is down).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 1,
+        "w": 4,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "(max(backup_last_start_timestamp_seconds{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"}) + max(backup_expected_interval_seconds{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"})) * 1000",
+          "legendFormat": "__auto",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeFromNow",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5a6171",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "noValue": "No data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Last run took",
+      "description": "Duration of the last finished run (`backup_last_duration_seconds`). The sparkline is the duration of each run over the selected range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 1,
+        "w": 4,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "max(backup_last_duration_seconds{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"})",
+          "legendFormat": "duration",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#B877D9"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5a6171",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "noValue": "No data",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Exit code",
+      "description": "Exit code of the last finished run. Borg: 0 OK, 1 warning, 2+ error. Others: anything but 0 is an error.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 3,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "max(backup_last_exit_code{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\", kind=\"borg\"})",
+          "legendFormat": "__auto",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "B",
+          "expr": "max(backup_last_exit_code{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\", kind!=\"borg\"})",
+          "legendFormat": "__auto",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5a6171",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "noValue": "No data",
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 2
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 34
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Success rate",
+      "description": "Successful runs / finished runs in the selected time range (counts changes of the success and end timestamps). Anything below 100% means at least one run failed.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 1,
+        "w": 3,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "sum(changes(backup_last_success_timestamp_seconds{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"}[$__range]))\n/\nsum(changes(backup_last_end_timestamp_seconds{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"}[$__range]))",
+          "legendFormat": "__auto",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5a6171",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 0.9
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "no runs",
+                  "color": "#5a6171",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "noValue": "no runs",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 30
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "state-timeline",
+      "title": "Status history",
+      "description": "Status of each backup over time (same colours as the tiles). Blue bars are runs in progress. Gaps mean no data for that period.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 24,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "(\n  max by (host, backup) (homelab:backup_status{host=~\"$host\", backup=~\"$backup\"})\n  + on (host, backup)\n  3 * (max by (host, backup) (backup_running{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"}) == bool 1)\n    * on (host, backup) (max by (host, backup) (homelab:backup_status{host=~\"$host\", backup=~\"$backup\"}) == bool 0)\n)\nor\nmax by (host, backup) (homelab:backup_status{host=~\"$host\", backup=~\"$backup\"})",
+          "legendFormat": "{{backup}}",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "editorMode": "code",
+          "interval": "1m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 2
+              },
+              {
+                "color": "blue",
+                "value": 3
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OK",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "WARNING",
+                  "color": "yellow",
+                  "index": 1
+                },
+                "2": {
+                  "text": "FAILED",
+                  "color": "red",
+                  "index": 2
+                },
+                "3": {
+                  "text": "RUNNING",
+                  "color": "blue",
+                  "index": 3
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "NO DATA",
+                  "color": "red",
+                  "index": 4
+                }
+              }
+            }
+          ],
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 85,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "never",
+        "rowHeight": 0.8,
+        "mergeValues": true,
+        "alignValue": "center",
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "perPage": 20
+      }
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "All backups",
+      "description": "One row per backup. Status is the authoritative column (borg exit code 1 is only a warning). Age is time since the last success; Next due is last start + interval.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "(\n  max by (host, backup) (homelab:backup_status{host=~\"$host\", backup=~\"$backup\"})\n  + on (host, backup)\n  3 * (max by (host, backup) (backup_running{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"}) == bool 1)\n    * on (host, backup) (max by (host, backup) (homelab:backup_status{host=~\"$host\", backup=~\"$backup\"}) == bool 0)\n)\nor\nmax by (host, backup) (homelab:backup_status{host=~\"$host\", backup=~\"$backup\"})",
+          "legendFormat": "__auto",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "B",
+          "expr": "max by (host, backup, kind, target) (backup_expected_interval_seconds{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"})",
+          "legendFormat": "__auto",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "C",
+          "expr": "max by (host, backup) (backup_last_success_timestamp_seconds{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"}) * 1000",
+          "legendFormat": "__auto",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "D",
+          "expr": "time() - max by (host, backup) (backup_last_success_timestamp_seconds{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"})",
+          "legendFormat": "__auto",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "E",
+          "expr": "max by (host, backup) (backup_last_duration_seconds{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"})",
+          "legendFormat": "__auto",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "F",
+          "expr": "max by (host, backup) (backup_last_exit_code{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"})",
+          "legendFormat": "__auto",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "G",
+          "expr": "(max by (host, backup) (backup_last_start_timestamp_seconds{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"}) + max by (host, backup) (backup_expected_interval_seconds{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"})) * 1000",
+          "legendFormat": "__auto",
+          "range": false,
+          "instant": true,
+          "format": "table",
+          "editorMode": "code"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "Value #A": 0,
+              "backup": 1,
+              "host": 2,
+              "kind": 3,
+              "target": 4,
+              "Value #C": 5,
+              "Value #D": 6,
+              "Value #E": 7,
+              "Value #F": 8,
+              "Value #G": 9,
+              "Value #B": 10
+            },
+            "renameByName": {
+              "Value #A": "Status",
+              "backup": "Backup",
+              "host": "Host",
+              "kind": "Kind",
+              "target": "Target",
+              "Value #B": "Interval",
+              "Value #C": "Last success",
+              "Value #D": "Age",
+              "Value #E": "Last duration",
+              "Value #F": "Exit code",
+              "Value #G": "Next due"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Backup"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "filterable": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5a6171",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "–"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "OK",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "WARNING",
+                        "color": "yellow",
+                        "index": 1
+                      },
+                      "2": {
+                        "text": "FAILED",
+                        "color": "red",
+                        "index": 2
+                      },
+                      "3": {
+                        "text": "RUNNING",
+                        "color": "blue",
+                        "index": 3
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null+nan",
+                      "result": {
+                        "text": "NO DATA",
+                        "color": "red",
+                        "index": 4
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Backup"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 190
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last success"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocalNoDateIfToday"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Age"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Exit code"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Next due"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Interval"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        },
+        "sortBy": []
+      }
+    },
+    {
+      "id": 11,
+      "type": "row",
+      "title": "Runs",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Run duration",
+      "description": "Duration of the last finished run, per backup (log scale so a 25 s sync and a 40 min borg run fit together). Each step is one run. Red regions are periods where the last run had failed.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 16,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "max by (backup) (backup_last_duration_seconds{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\"})",
+          "legendFormat": "{{backup}}",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "shades",
+            "fixedColor": "#B877D9"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "scaleDistribution": {
+              "type": "log",
+              "log": 10
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "insertNulls": false,
+            "barAlignment": 0,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5a6171",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "min",
+            "mean",
+            "max",
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Exit code",
+      "description": "Last exit code over time. Green 0; borg 1 yellow (warning); red is an error.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 19,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "max by (backup) (backup_last_exit_code{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\", kind=\"borg\"})",
+          "legendFormat": "{{backup}}",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "B",
+          "expr": "max by (backup) (backup_last_exit_code{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\", kind!=\"borg\"})",
+          "legendFormat": "{{backup}}",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "scheme",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "insertNulls": false,
+            "barAlignment": 0,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [],
+          "decimals": 0,
+          "min": 0,
+          "max": 3
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 2
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "Borg repository",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Repository size on disk",
+      "description": "Unique (deduplicated, compressed) size of all archives in the repo: what it actually costs on disk (`backup_borg_repo_unique_bytes`).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "sum(backup_borg_repo_unique_bytes{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\", kind=\"borg\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#4FC1B9"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5a6171",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "noValue": "No data",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 30
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Last archive size",
+      "description": "Original size of the data the last archive read (`backup_borg_original_bytes`).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 28,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "sum(backup_borg_original_bytes{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\", kind=\"borg\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#4FC1B9"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5a6171",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "noValue": "No data",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 30
+        }
+      }
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "New data in last archive",
+      "description": "Deduplicated size of the last archive: how much new data it added (`backup_borg_deduplicated_bytes`).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "sum(backup_borg_deduplicated_bytes{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\", kind=\"borg\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#A7E3DE"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5a6171",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "noValue": "No data",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 30
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "stat",
+      "title": "Repo growth in range",
+      "description": "Change in repository unique size over the selected time range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 28,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "sum(delta(backup_borg_repo_unique_bytes{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\", kind=\"borg\"}[$__range]))",
+          "legendFormat": "__auto",
+          "range": false,
+          "instant": true,
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#B877D9"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5a6171",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [],
+          "noValue": "No data",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 30
+        }
+      }
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Archive size: original vs new data",
+      "description": "Per archive: data read (left axis) vs new deduplicated data written (right axis). A jump in the right axis means many new or changed files.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "max by (backup) (backup_borg_original_bytes{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\", kind=\"borg\"})",
+          "legendFormat": "{{backup}} original",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "B",
+          "expr": "max by (backup) (backup_borg_deduplicated_bytes{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\", kind=\"borg\"})",
+          "legendFormat": "{{backup}} new (dedup)",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#4FC1B9"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "insertNulls": false,
+            "barAlignment": 0,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5a6171",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B877D9"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 15
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Repository size on disk",
+      "description": "Unique size of the whole borg repository over time.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "max by (backup) (backup_borg_repo_unique_bytes{job=\"homelab_backup\", host=~\"$host\", backup=~\"$backup\", kind=\"borg\"})",
+          "legendFormat": "{{backup}}",
+          "range": true,
+          "instant": false,
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#4FC1B9"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "showPoints": "never",
+            "pointSize": 4,
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "insertNulls": false,
+            "barAlignment": 0,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5a6171",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    }
+  ]
+}

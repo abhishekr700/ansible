@@ -37,3 +37,7 @@
 - name: Setup WUD (auto-deploys foodies-app)
   ansible.builtin.import_playbook: setup-wud.yaml
   tags: wud
+
+- name: Setup monitoring (Prometheus, Pushgateway, Grafana)
+  ansible.builtin.import_playbook: setup-monitoring.yaml
+  tags: monitoring

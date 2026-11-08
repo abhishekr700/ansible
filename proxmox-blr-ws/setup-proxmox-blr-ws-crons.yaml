@@ -25,13 +25,40 @@
         - { name: "Proxmox BLR WS photos backup cron", script: "{{ proxmox_blr_ws_backup_cron }}" }
         - { name: "Proxmox BLR WS photos backup sync gdrive cron", script: "{{ proxmox_blr_ws_backup_sync_gdrive_cron }}" }
 
+    # backup-run wraps the backup scripts and pushes their status to the Pushgateway on atlas (metrics contract
+    # v1). It never changes a backup's outcome: it exits with the script's own code and ignores push failures.
+    - name: Install the backup-run wrapper
+      become: true
+      ansible.builtin.copy:
+        src: files/backup-run
+        dest: /usr/local/bin/backup-run
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Configure backup-run
+      become: true
+      ansible.builtin.copy:
+        dest: /etc/backup-run.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          # Managed by Ansible (proxmox-blr-ws/setup-proxmox-blr-ws-crons.yaml). Read by /usr/local/bin/backup-run.
+          # Environment variables of the same name win over these.
+          BACKUP_RUN_PUSHGATEWAY_URL="${BACKUP_RUN_PUSHGATEWAY_URL:-{{ backup_run_pushgateway_url }}}"
+          BACKUP_RUN_HOST="${BACKUP_RUN_HOST:-{{ inventory_hostname }}}"
+
     - name: Add cron job to crontab
       become: true
       ansible.builtin.cron:
         name: "{{ item.name }}"
         minute: "{{ item.minute }}"
         hour: "{{ item.hour }}"
+        # Same log file and systemd-cat as before; backup-run only sits in front of the script.
         job: >
+          /usr/local/bin/backup-run --backup {{ item.backup }} --kind {{ item.kind }} --target {{ item.target }}
+          --interval {{ item.interval }} --
           {{ proxmox_blr_ws_crons_folder }}/{{ item.script }} 2>&1 |
           tee -a {{ proxmox_blr_ws_cron_logs_dir }}/{{ item.log_dir }}/$(date +\%Y-\%m-\%d_\%H-\%M-\%S).log |
           systemd-cat -t "{{ item.name }}"
@@ -43,6 +70,10 @@
             hour: "*/3",
             script: "{{ proxmox_blr_ws_backup_cron }}",
             log_dir: "{{ proxmox_blr_ws_backup_cron_log_dir }}",
+            backup: "photos_borg",
+            kind: "borg",
+            target: "local-zfs",
+            interval: 10800,
           }
         - {
             name: "Proxmox BLR WS photos backup sync gdrive cron",
@@ -50,6 +81,10 @@
             hour: "*/3",
             script: "{{ proxmox_blr_ws_backup_sync_gdrive_cron }}",
             log_dir: "{{ proxmox_blr_ws_backup_sync_gdrive_cron_log_dir }}",
+            backup: "photos_gdrive_sync",
+            kind: "rclone",
+            target: "gdrive",
+            interval: 10800,
           }
 
     - name: Add log cleanup cron job

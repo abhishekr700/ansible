@@ -45,3 +45,24 @@ fail2ban_ignoreip: "127.0.0.1/8 ::1 100.64.0.0/10 192.168.0.0/16"
 
 # Tailscale exit node
 atlas_uplink_interface: "enp0s6"
+
+# Monitoring (atlas/setup-monitoring.yaml): Prometheus + Pushgateway + Grafana for homelab backup metrics.
+# Images pinned by version and digest (multi-arch index; atlas is arm64). Bump each pair together.
+prometheus_version: "v3.15.1"
+prometheus_image_digest: "sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2"
+pushgateway_version: "v1.11.5"
+pushgateway_image_digest: "sha256:bf6442633f6129d3e3f9861fa14c77bc012d74b33a1dd213d7b458b89ce3cc5d"
+grafana_version: "13.2.5"
+grafana_image_digest: "sha256:9f7aa1e1e3246aade5792d35a738049f7f32f89cd51d1956cf426a4e86268a84"
+prometheus_retention: "90d"
+# Loopback only (Docker bypasses ufw). Tailnet access is `tailscale serve` -> these binds.
+monitoring_bind_address: "127.0.0.1"
+prometheus_port: 9090
+pushgateway_port: 9091
+grafana_port: 3010
+# MagicDNS name. tailscale serve routes by Host, so clients must use this name, not the Tailscale IP.
+atlas_tailnet_fqdn: "atlas.taila8099.ts.net"
+# Backups that must report; any of them with no data at all is red (homelab:backup_status).
+monitoring_expected_backups:
+  - { host: proxmox-blr-ws, backup: photos_borg, kind: borg, target: local-zfs }
+  - { host: proxmox-blr-ws, backup: photos_gdrive_sync, kind: rclone, target: gdrive }

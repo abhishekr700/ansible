@@ -1,0 +1,12 @@
+# Managed by Ansible (atlas/setup-monitoring.yaml). Dashboards come from the repo dir
+# atlas/files/monitoring/grafana/dashboards/ (copied to the host); edit them there, not in the UI.
+apiVersion: 1
+providers:
+  - name: homelab
+    folder: Homelab
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards

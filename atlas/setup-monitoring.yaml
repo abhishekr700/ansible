@@ -1,0 +1,142 @@
+---
+# Monitoring on Atlas: Prometheus + Pushgateway + Grafana (v1: homelab backup metrics, pushed by backup-run).
+# All ports bind to 127.0.0.1 (atlas is public and Docker bypasses ufw). Tailnet access is `tailscale serve`:
+#   Pushgateway http://<atlas_tailnet_fqdn>:<pushgateway_port>, Grafana http://<atlas_tailnet_fqdn>:<grafana_port>.
+# Grafana's admin password is generated once into {{ local_env_folder }}/grafana-atlas-admin-password on the
+# controller (never in the repo). Dashboards: atlas/files/monitoring/grafana/dashboards/ (folder "Homelab").
+- name: Setup monitoring on Atlas
+  hosts: atlas
+  vars:
+    monitoring_dest: "{{ atlas_containers_folder }}/monitoring"
+    # Image users: Prometheus and Pushgateway run as nobody, Grafana as 472.
+    monitoring_data_dirs:
+      - { path: data/prometheus, owner: "65534" }
+      - { path: data/pushgateway, owner: "65534" }
+      - { path: data/grafana, owner: "472" }
+  tasks:
+    - name: Ensure the monitoring directories exist
+      ansible.builtin.file:
+        path: "{{ monitoring_dest }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - ""
+        - config/prometheus/rules
+        - config/grafana/provisioning/datasources
+        - config/grafana/provisioning/dashboards
+        - config/grafana/dashboards
+        - data
+
+    - name: Ensure the data directories exist, owned by each image's user
+      become: true
+      ansible.builtin.file:
+        path: "{{ monitoring_dest }}/{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        group: "{{ item.owner }}"
+        mode: "0755"
+      loop: "{{ monitoring_data_dirs }}"
+
+    - name: Copy the Prometheus config
+      ansible.builtin.copy:
+        src: files/monitoring/prometheus/prometheus.yml
+        dest: "{{ monitoring_dest }}/config/prometheus/prometheus.yml"
+        mode: "0644"
+      register: monitoring_prometheus_config
+
+    - name: Template the backup status rules
+      ansible.builtin.template:
+        src: templates/monitoring/homelab-backups.rules.yml.j2
+        dest: "{{ monitoring_dest }}/config/prometheus/rules/homelab-backups.yml"
+        mode: "0644"
+      register: monitoring_prometheus_rules
+
+    - name: Copy the Grafana provisioning files
+      ansible.builtin.copy:
+        src: "files/monitoring/grafana/provisioning/{{ item }}"
+        dest: "{{ monitoring_dest }}/config/grafana/provisioning/{{ item }}"
+        mode: "0644"
+      loop:
+        - datasources/prometheus.yml
+        - dashboards/homelab.yml
+      register: monitoring_grafana_provisioning
+
+    # Grafana re-reads this directory every 30s, so dashboard changes need no restart.
+    - name: Copy the Grafana dashboards
+      ansible.builtin.copy:
+        src: files/monitoring/grafana/dashboards/
+        dest: "{{ monitoring_dest }}/config/grafana/dashboards/"
+        mode: "0644"
+
+    - name: Write Grafana's env file (admin password)
+      ansible.builtin.copy:
+        content: |
+          GF_SECURITY_ADMIN_PASSWORD={{ lookup('ansible.builtin.password', local_env_folder + '/grafana-atlas-admin-password', length=32, chars=['ascii_letters', 'digits']) }}
+        dest: "{{ monitoring_dest }}/grafana.env"
+        mode: "0600"
+      no_log: true
+      diff: false
+      register: monitoring_grafana_env
+
+    - name: Template the monitoring compose file
+      ansible.builtin.template:
+        src: templates/monitoring/docker-compose.yml.j2
+        dest: "{{ monitoring_dest }}/docker-compose.yml"
+        mode: "0644"
+
+    - name: Start the monitoring stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ monitoring_dest }}"
+        pull: missing
+        state: present
+      register: monitoring_compose
+      # On the first --check run the project folder doesn't exist yet, so this can't be simulated.
+      ignore_errors: "{{ ansible_check_mode }}"
+
+    # Config files are bind-mounted, so compose sees no change when they do. Restart the service that reads them.
+    - name: Restart Prometheus after a config or rules change
+      community.docker.docker_compose_v2:
+        project_src: "{{ monitoring_dest }}"
+        services: [prometheus]
+        state: restarted
+      when: (monitoring_prometheus_config.changed or monitoring_prometheus_rules.changed) and not monitoring_compose.changed
+      ignore_errors: "{{ ansible_check_mode }}"
+
+    # env_file changes don't change compose's config hash, and a restart doesn't re-read env_file: recreate.
+    - name: Recreate Grafana after a provisioning or env change
+      community.docker.docker_compose_v2:
+        project_src: "{{ monitoring_dest }}"
+        services: [grafana]
+        state: present
+        recreate: always
+      when: (monitoring_grafana_provisioning.changed or monitoring_grafana_env.changed) and not monitoring_compose.changed
+      ignore_errors: "{{ ansible_check_mode }}"
+
+# HOST-LEVEL CHANGE (outside the compose project): tailnet exposure through `tailscale serve`, the same pattern
+# as WUD (atlas/setup-wud.yaml). Docker binds loopback only, and tailscaled proxies tailnet traffic to it, so there
+# is no boot-order problem (Docker never binds the Tailscale IP) and no firewall or network config is touched.
+# The serve config is tailscaled state and persists across reboots. Undo: `tailscale serve --http=<port> off`.
+- name: Serve monitoring on the tailnet (tailscale serve)
+  hosts: atlas
+  tags: monitoring-serve
+  tasks:
+    - name: Read Tailscale serve config
+      become: true
+      ansible.builtin.command: tailscale serve status --json
+      register: monitoring_serve_status
+      changed_when: false
+      check_mode: false
+
+    - name: Serve Pushgateway and Grafana on the tailnet
+      become: true
+      ansible.builtin.command: >-
+        tailscale serve --bg --yes --http={{ item }} http://{{ monitoring_bind_address }}:{{ item }}
+      loop:
+        - "{{ pushgateway_port }}"
+        - "{{ grafana_port }}"
+      when: >-
+        (monitoring_serve_status.stdout | from_json).TCP | default({}) | dict2items
+        | selectattr('key', 'equalto', item | string) | selectattr('value.HTTP', 'defined')
+        | list | length == 0
+        or ('http://' + monitoring_bind_address + ':' + (item | string)) not in monitoring_serve_status.stdout
+      changed_when: true
