@@ -51,6 +51,20 @@
         log_dir: "{{ atlas_backup_sync_to_cloud_cron_log_dir }}",
       }
 
+- name: Add weekly docker prune cron job
+  become: true
+  ansible.builtin.cron:
+    name: "Atlas docker prune"
+    user: root
+    weekday: "{{ atlas_docker_prune_weekday }}"
+    hour: "{{ atlas_docker_prune_hour }}"
+    minute: "{{ atlas_docker_prune_minute }}"
+    job: >
+      (docker builder prune -af --filter until={{ atlas_docker_prune_keep }} &&
+      docker image prune -af --filter until={{ atlas_docker_prune_keep }}) 2>&1 |
+      systemd-cat -t "atlas-docker-prune"
+    state: present
+
 - name: Remove old OneDrive sync cron job
   become: true
   ansible.builtin.cron:

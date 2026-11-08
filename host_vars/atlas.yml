@@ -26,6 +26,15 @@ atlas_backup_cron_log_dir: "atlas-backup-cron"
 atlas_backup_sync_to_cloud_cron: "atlas_backup_sync_to_cloud.sh"
 atlas_backup_sync_to_cloud_cron_log_dir: "atlas-backup-sync-to-cloud-cron"
 
+# Weekly docker prune (build cache + unused images older than the keep window; volumes/containers untouched)
+atlas_docker_prune_weekday: "0"
+atlas_docker_prune_hour: "3"
+atlas_docker_prune_minute: "0"
+atlas_docker_prune_keep: "168h"
+
+# Journald size cap (used by atlas/setup-atlas-disk-cleanup.yaml)
+atlas_journal_max_use: "1G"
+
 # Fail2ban configuration parameters
 fail2ban_bantime: "1h"
 fail2ban_findtime: "10m"
