@@ -10,6 +10,7 @@ Homelab infra for one person. Ansible configures machines; Terraform creates VMs
   Tailnet policy: `terraform/tailscale/README.md`. Agent git access (GitLab deploy key, mirror to GitHub): `terraform/gitlab/README.md`.
   Code repos live on GitLab and GitHub only gets `main`, so new CI goes in GitLab CI (pattern: foodies-app `.gitlab-ci.yml`, `docs/ci.md`).
 - `hermes` in the inventory is a Raspberry Pi, not Hermes Agent.
+- Monitoring (Prometheus, Pushgateway, Grafana on atlas; backup metrics via `backup-run`): `atlas/docs/monitoring.md`.
 
 ## Conventions
 - Filenames are hyphen-case (`setup-foo.yaml`). Host-specific vars go in `host_vars/`, not in playbooks.
