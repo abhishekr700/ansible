@@ -127,11 +127,14 @@
       changed_when: false
       check_mode: false
 
-    - name: Serve Pushgateway and Grafana on the tailnet
+    # Prometheus is served too, so the homelab map's generator (and ad-hoc queries) reach it over the tailnet.
+    # Its API has no auth: any untagged tailnet device can query it. tag:agent only reaches atlas:443.
+    - name: Serve Prometheus, Pushgateway and Grafana on the tailnet
       become: true
       ansible.builtin.command: >-
         tailscale serve --bg --yes --http={{ item }} http://{{ monitoring_bind_address }}:{{ item }}
       loop:
+        - "{{ prometheus_port }}"
         - "{{ pushgateway_port }}"
         - "{{ grafana_port }}"
       when: >-
