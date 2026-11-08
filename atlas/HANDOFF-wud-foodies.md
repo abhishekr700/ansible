@@ -96,3 +96,7 @@ and the setup stays in Ansible (a second run `changed=0`).
   Left: the user adds the Pangolin resource → `http://172.17.0.1:3009` with auth. End-to-end test: merge a trivial
   foodies-app change and watch WUD (within 5 min of publish) recreate it, stay healthy, and send Telegram. Commit
   when the user asks.
+- 2026-11-08: **end-to-end test passed.** foodies-app MR !4 merged at 14:39 IST → pipeline done at 14:42 → WUD
+  recreated the container at 14:45:39 on the new `main` digest, healthy, config preserved (ports, env, labels,
+  network), old digest pruned. Ansible `--check` `changed=0`. The user confirmed the Telegram messages arrived (WUD doesn't log
+  sends at the default log level). **Handoff complete.**
